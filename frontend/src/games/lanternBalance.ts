@@ -73,7 +73,16 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
       ctx.font = '50px serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      for (let i = 0; i < STACK; i++) ctx.fillText('🏮', 0, -40 - i * 62)
+      for (let i = 0; i < STACK; i++) {
+        ctx.fillText('🏮', 0, -40 - i * 62)
+        // Read top to bottom the lanterns spell 1024.
+        ctx.save()
+        ctx.font = 'bold 20px "PingFang SC", sans-serif'
+        ctx.fillStyle = '#ffe066'
+        ctx.fillText('1024'[STACK - 1 - i], 0, -38 - i * 62)
+        ctx.restore()
+        ctx.font = '50px serif'
+      }
       ctx.restore()
       // Tilt meter
       ctx.fillStyle = 'rgba(255,255,255,0.35)'

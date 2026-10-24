@@ -51,4 +51,9 @@ uvicorn backend.main:app --port 8000
 
 ## 部署
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/xiaobaoliu849/changan-trip)
+
+点上面的按钮，用 GitHub 登录 Render，填 `GEMINI_API_KEY` 和 `EVEROS_API_KEY`，几分钟后得到一个公开链接，玩家打开即玩、不用填 key。服务放在新加坡区（Gemini 可用，国内访问也较快）。
+
+
 仓库自带 `Dockerfile`，Railway / Render / Fly.io 都可以直接用：新建服务 → 连接本仓库 → 设置环境变量 `GEMINI_API_KEY`、`EVEROS_API_KEY` → 部署。

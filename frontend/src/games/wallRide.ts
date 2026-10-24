@@ -88,6 +88,19 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
       const bw = bg.width * s
       const off = (scroll * 0.25) % bw
       for (let k = -1; k < 3; k++) ctx.drawImage(bg, k * bw - off, 0, bw, H)
+      // WaytoAGI 1024 banners hanging from the parapet
+      for (let k = 0; k < 3; k++) {
+        const bx = ((k * 420 + 200 - scroll * 0.6) % 1260 + 1260) % 1260 - 200
+        ctx.fillStyle = '#b8322a'
+        ctx.fillRect(bx, GROUND - 150, 150, 46)
+        ctx.strokeStyle = '#e9a93b'
+        ctx.lineWidth = 3
+        ctx.strokeRect(bx + 4, GROUND - 146, 142, 38)
+        ctx.fillStyle = '#ffe9b0'
+        ctx.font = 'bold 17px "PingFang SC", sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('WaytoAGI · 1024', bx + 75, GROUND - 121)
+      }
       // Wall walkway
       ctx.fillStyle = '#7a5a43'
       ctx.fillRect(0, GROUND, W, H - GROUND)

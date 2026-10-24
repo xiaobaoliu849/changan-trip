@@ -6,6 +6,7 @@ import {
 import { cutOutWhite, fileToBase64, loadImage, playVoice, setMuted, stopVoice } from './media'
 import Xiaoyong, { Notebook } from './components/Xiaoyong'
 import Passport from './components/Passport'
+import Credits from './components/Credits'
 import GameCanvas from './games/GameCanvas'
 import type { Assets, GameFactory } from './games/engine'
 import { catchFood } from './games/catchFood'
@@ -230,6 +231,7 @@ export default function App() {
 
       {screen === 'home' && (
         <div className="screen home">
+          <div className="event-badge">WaytoAGI 1024 切磋大会 · 游戏赛道</div>
           <h1>
             长安记得你
             <small>陪一个健忘的兵马俑逛西安</small>
@@ -271,6 +273,7 @@ export default function App() {
             {error && <p className="error">{error}</p>}
           </div>
           <p className="tip">游戏有语音，建议开声音 · 手机和电脑都能玩</p>
+          <Credits />
         </div>
       )}
 
@@ -412,6 +415,7 @@ export default function App() {
                     换个主角
                   </button>
                 </div>
+                <Credits />
               </>
             )}
           </div>
