@@ -55,6 +55,9 @@ STOPS = {
     "chengqiang": "城墙",
     "datang": "大唐不夜城",
 }
+# Every run visits all five stops in this order: it sweeps the map from 小俑's own pit in the east
+# to 大唐不夜城, right next to the 大雁塔 finish, without doubling back.
+ROUTE = ["bingmayong", "chengqiang", "zhonglou", "huiminjie", "datang"]
 FOODS = {
     "roujiamo": "肉夹馍",
     "biangbiang": "biangbiang面",
@@ -227,7 +230,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
             # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip immediately.
             "greeting": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
             "recalled": [],
-            "route": ["zhonglou", "huiminjie", "bingmayong", "chengqiang"],
+            "route": ROUTE,
             "food_order": ["roujiamo", "biangbiang", "liangpi"],
             "spicy_tease": any("辣" in t for t in body.hero.traits),
             "wall_warn": "",
@@ -245,7 +248,6 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         + "\n只返回 JSON：{"
         "\"greeting\":\"小俑开场白，60字内；有记忆就具体提起1-2件往事并调侃，没记忆就说初次见面、我会记住你\","
         "\"recalled\":[\"小本本上写的往事，每条20字内，最多3条，只能改写上面「你记得的事」里真实发生过的，绝不编造，没有就空数组\"],"
-        "\"route\":[\"推荐4个景点id，优先TA没去过或失败过的\"],"
         "\"food_order\":[\"回民街顾客要的3个美食id，优先TA没吃过的\"],"
         "\"spicy_tease\":TA怕辣或上次被辣到就true,"
         "\"wall_warn\":\"如果TA在城墙某处撞过，写一句提醒，否则空字符串\","
@@ -256,18 +258,12 @@ async def brief(body: BriefIn) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("brief generation failed: %s", exc)
         plan = {}
-    route = [s for s in plan.get("route", []) if s in STOPS][:4]
-    for s in STOPS:
-        if len(route) >= 4:
-            break
-        if s not in route:
-            route.append(s)
     food = [f for f in plan.get("food_order", []) if f in FOODS][:3] or ["roujiamo", "biangbiang", "liangpi"]
     return {
         # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip.
         "greeting": plan.get("greeting") or "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
         "recalled": plan.get("recalled", [])[:3] if memories else [],
-        "route": route,
+        "route": ROUTE,
         "food_order": food,
         "spicy_tease": bool(plan.get("spicy_tease")),
         "wall_warn": plan.get("wall_warn", ""),

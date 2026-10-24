@@ -61,8 +61,15 @@ const PLACES: Record<Place, { x: number; y: number; icon: string }> = {
   dayanta: { x: 603, y: 555, icon: '🏯' },
 }
 
-const WAIT_LINES =['我在捏你的泥人……', '我两千年没干过这活了，稍等……', '我在给你上色……快好了！']
+// Same order as ROUTE in backend/main.py: every run visits all five stops, ending next to 大雁塔.
+const ROUTE: StopId[] = ['bingmayong', 'chengqiang', 'zhonglou', 'huiminjie', 'datang']
+
+const WAIT_LINES = ['我在捏你的泥人……', '我两千年没干过这活了，稍等……', '我在给你上色……快好了！']
+// 再游一次 keeps the same hero; the wait is 小俑 recalling the last trip, not drawing anyone.
+const RECALL_LINES = ['我翻翻小本本……', '想想你上回在哪摔的跤……', '给你换个新菜单……']
 const LIVES = 3
+// One-tap things to tell 小俑 at the finish, so nobody has to type on a phone.
+const QUICK_SAYS = ['谢谢你陪我逛长安！', '下次带你去吃泡馍', '城墙我还会回来的', '你可别再把我忘了']
 
 type Screen = 'home' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
 const SCREEN_MUSIC: Record<Screen, Track> = {
@@ -82,6 +89,8 @@ export default function App() {
   const [step, setStep] = useState(0)
   const [lives, setLives] = useState(LIVES)
   const [stamps, setStamps] = useState<StopId[]>([])
+  // Stamps from the previous trip of this hero (null on a new hero), shown on the route and while recalling.
+  const [lastStamps, setLastStamps] = useState<StopId[] | null>(null)
   const [log, setLog] = useState<string[]>([])
   const [result, setResult] = useState<StopResult | null>(null)
   const [snapshot, setSnapshot] = useState<string>()
@@ -162,7 +171,7 @@ export default function App() {
       cutOutWhite(rawSprite),
       api.brief(h, no).catch((): Brief => ({
         greeting: OPENING_LINE,
-        recalled: [], route: ['huiminjie', 'bingmayong', 'chengqiang', 'datang'],
+        recalled: [], route: ROUTE,
         food_order: ['roujiamo', 'biangbiang', 'liangpi'], spicy_tease: false, wall_warn: '',
         stop_lines: {}, memory_source: 'none',
       })),
@@ -179,6 +188,7 @@ export default function App() {
   const create = async (useDefault = false) => {
     setError('')
     resetPlayer()
+    setLastStamps(null)
     setScreen('making')
     try {
       if (useDefault) {
@@ -195,6 +205,7 @@ export default function App() {
 
   const replay = async () => {
     if (!hero) return
+    setLastStamps(stamps)
     setScreen('making')
     stopVoice()
     await startRun(hero, sprite)
@@ -388,7 +399,7 @@ export default function App() {
           <div className="card">
             <div className="card-head">
               <label>一句话描述你的旅行主角</label>
-              <span className="route-hint">闯 4 站集章 → 🏁 终点大雁塔</span>
+              <span className="route-hint">闯 5 站集章 → 🏁 终点大雁塔</span>
             </div>
             <textarea
               value={text}
@@ -440,8 +451,23 @@ export default function App() {
 
       {screen === 'making' && (
         <div className="screen center">
-          <img className="spin" src="/assets/img/xiaoyong_confused.png" alt="" />
-          <p className="wait">{WAIT_LINES[waitLine]}</p>
+          {lastStamps && hero ? (
+            <>
+              <div className="recall">
+                <img className="recall-hero" src={sprite} alt={hero.name} />
+                <img className="recall-xy" src="/assets/img/xiaoyong_happy.png" alt="" />
+              </div>
+              <p className="wait">{RECALL_LINES[waitLine]}</p>
+              <p className="recall-note">
+                还是你：{hero.name} · 上回集了 {lastStamps.length}/{ROUTE.length} 个章
+              </p>
+            </>
+          ) : (
+            <>
+              <img className="spin" src="/assets/img/xiaoyong_confused.png" alt="" />
+              <p className="wait">{WAIT_LINES[waitLine]}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -508,6 +534,8 @@ export default function App() {
                     <b>{i + 1}</b>
                   </span>
                   <span className="j-name">{STOPS[s].name}</span>
+                  {lastStamps &&
+                    (lastStamps.includes(s) ? <span className="j-last done">上次✓</span> : <span className="j-last">补章</span>)}
                 </li>
               ))}
               <li className="goal">
@@ -515,7 +543,13 @@ export default function App() {
                 <span className="j-name">大雁塔</span>
               </li>
             </ol>
-            <p className="journey-note">闯 {route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）</p>
+            <p className="journey-note">
+              {lastStamps
+                ? lastStamps.length >= route.length
+                  ? `上次 ${route.length} 个章全集齐了，这次冲个全程不掉血！`
+                  : `上次集了 ${lastStamps.length}/${route.length} 个章，这次把「补章」的拿下！`
+                : `闯 ${route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）`}
+            </p>
           </div>
           <div className="cta">
             <button className="btn big go" onClick={goStop}>
@@ -586,12 +620,36 @@ export default function App() {
       )}
 
       {screen === 'final' && hero && (
-        <div className="screen final" style={{ backgroundImage: 'url(/assets/img/bg_dayanta.jpg)' }}>
+        <div className="screen final">
           <div className="final-inner">
-            <h2>终点 · 大雁塔</h2>
-            <div className="final-venue">📍 大雁塔旁 · 西安曲江京东MALL（WaytoAGI 1024 主会场）</div>
+            <div className="final-hero">
+              <img className="fh-bg" src="/assets/img/bg_dayanta.jpg" alt="大雁塔" />
+              <img className="fh-me" src={sprite} alt={hero.name} />
+              <div className="fh-title">
+                <small>第 {runNo} 次入城 · 抵达终点</small>
+                <h2>大雁塔</h2>
+              </div>
+            </div>
+            <div className="final-venue">📍 大雁塔旁 · 曲江京东MALL · 1024 主会场</div>
             {!ending ? (
               <>
+                <div className="trip-sum">
+                  <div className="ts-head">
+                    <b>今日战绩</b>
+                    <span>
+                      集章 {stamps.length}/{route.length} · 体力 {'❤️'.repeat(Math.max(0, lives))}
+                      {'🤍'.repeat(Math.max(0, LIVES - Math.max(0, lives)))}
+                    </span>
+                  </div>
+                  <div className="ts-seals">
+                    {route.map((s) => (
+                      <div key={s} className="ts-seal">
+                        <div className={stamps.includes(s) ? 'seal on' : 'seal'}>{STOPS[s].stamp}</div>
+                        <small>{STOPS[s].name}</small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <Xiaoyong
                   mood="happy"
                   speaking={speaking}
@@ -599,9 +657,17 @@ export default function App() {
                   onStop={handleStopVoice}
                   text="大雁塔到了，咱今天这趟没白走。临走前，有啥想对我说的？我记小本本上，下回你来，我还认得你。"
                 />
-                <div className="card">
-                  <input value={said} maxLength={50} placeholder="对小俑说一句话（可以不填）" onChange={(e) => setSaid(e.target.value)} />
-                  <button className="btn" onClick={finishRun} disabled={endBusy}>
+                <div className="card say-card">
+                  <b className="say-title">📒 临走前，对小俑说一句</b>
+                  <div className="quick-says">
+                    {QUICK_SAYS.map((q) => (
+                      <button key={q} type="button" className={said === q ? 'on' : ''} onClick={() => setSaid(said === q ? '' : q)}>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                  <input value={said} maxLength={50} placeholder="或者自己写一句（可以不填）" onChange={(e) => setSaid(e.target.value)} />
+                  <button className="btn big go" onClick={finishRun} disabled={endBusy}>
                     {endBusy ? '小俑在写游记…' : '写进小本本 →'}
                   </button>
                 </div>

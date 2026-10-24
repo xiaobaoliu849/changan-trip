@@ -1,4 +1,4 @@
-import { H, W, drawSprite, floatText, hearts, hud, rand, type GameFactory } from './engine'
+import { H, W, drawSprite, floatText, hearts, hud, rand, roundRect, type GameFactory } from './engine'
 
 interface Obstacle {
   x: number
@@ -7,7 +7,13 @@ interface Obstacle {
 
 const TIME = 30
 const TOTAL_KM = 13.74
-const GROUND = H - 120
+const GROUND = H - 150
+// The background is zoomed so the wall fills the screen: its walkway edge (y≈640 of 768) lands on GROUND.
+const BG_ZOOM = 1.25
+const BG_EDGE = 640
+const PX = 110 // the rider's x
+const FONT = '"PingFang SC", "Microsoft YaHei", sans-serif'
+const BANNER = 'WaytoAGI · 1024'
 const LABEL = { tourist: '游客', selfie: '自拍杆', drum: '鼓' }
 const EMOJI = { tourist: '🚶', selfie: '🤳', drum: '🥁' }
 
@@ -72,7 +78,7 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i]
         if (o.x < -60) obstacles.splice(i, 1)
-        else if (invuln === 0 && Math.abs(o.x - 110) < 36 && y > -60) {
+        else if (invuln === 0 && Math.abs(o.x - PX) < 40 && y > -66) {
           hits.push({ segment: segment(), kind: o.kind })
           invuln = 1
           obstacles.splice(i, 1)
@@ -84,68 +90,113 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
     draw(ctx) {
       // Parallax: the background scrolls slowly, repeating mirrored tiles.
       const bg = assets.bg
-      const s = H / bg.height
+      const s = BG_ZOOM * (H / bg.height)
       const bw = bg.width * s
+      const by = GROUND - BG_EDGE * (H / bg.height) * BG_ZOOM
       const off = (scroll * 0.25) % bw
-      for (let k = -1; k < 3; k++) ctx.drawImage(bg, k * bw - off, 0, bw, H)
-      // WaytoAGI 1024 banners hanging from the parapet
-      for (let k = 0; k < 3; k++) {
-        const bx = ((k * 420 + 200 - scroll * 0.6) % 1260 + 1260) % 1260 - 200
+      for (let k = -1; k < 3; k++) ctx.drawImage(bg, k * bw - off, by, bw, bg.height * s)
+      // WaytoAGI 1024 signs on two posts, standing on the parapet above the rider's head
+      ctx.font = `bold 18px ${FONT}`
+      const bwid = ctx.measureText(BANNER).width + 30
+      const top = GROUND - 262
+      for (let k = 0; k < 2; k++) {
+        const bx = ((k * 360 - scroll * 0.6) % 720 + 720) % 720 - bwid
+        ctx.fillStyle = '#4a2e1c'
+        ctx.fillRect(bx + 14, top + 40, 5, 52)
+        ctx.fillRect(bx + bwid - 19, top + 40, 5, 52)
         ctx.fillStyle = '#b8322a'
-        ctx.fillRect(bx, GROUND - 150, 150, 46)
+        roundRect(ctx, bx, top, bwid, 44, 6)
+        ctx.fill()
         ctx.strokeStyle = '#e9a93b'
-        ctx.lineWidth = 3
-        ctx.strokeRect(bx + 4, GROUND - 146, 142, 38)
+        ctx.lineWidth = 2.5
+        roundRect(ctx, bx + 4, top + 4, bwid - 8, 36, 4)
+        ctx.stroke()
         ctx.fillStyle = '#ffe9b0'
-        ctx.font = 'bold 17px "PingFang SC", sans-serif'
         ctx.textAlign = 'center'
-        ctx.fillText('WaytoAGI · 1024', bx + 75, GROUND - 121)
+        ctx.textBaseline = 'middle'
+        ctx.fillText(BANNER, bx + bwid / 2, top + 23)
       }
-      // Wall walkway
+      ctx.textBaseline = 'alphabetic'
+      // Front face of the wall
       ctx.fillStyle = '#7a5a43'
       ctx.fillRect(0, GROUND, W, H - GROUND)
+      ctx.fillStyle = '#4a2e1c'
+      ctx.fillRect(0, GROUND, W, 6)
       ctx.fillStyle = '#5e4331'
       for (let k = 0; k < 14; k++) {
         const bx = ((k * 60 - scroll) % (W + 60) + W + 60) % (W + 60) - 60
-        ctx.fillRect(bx, GROUND + 10, 50, 14)
-        ctx.fillRect(bx + 25, GROUND + 40, 50, 14)
+        ctx.fillRect(bx, GROUND + 16, 50, 14)
+        ctx.fillRect(bx + 25, GROUND + 44, 50, 14)
       }
       for (const o of obstacles) {
-        ctx.font = '54px serif'
+        ctx.font = '66px serif'
         ctx.textAlign = 'center'
-        ctx.fillText(EMOJI[o.kind], o.x, GROUND + 4)
+        ctx.fillText(EMOJI[o.kind], o.x, GROUND + 6)
       }
       // Hero on a bike
-      const px = 110
       const py = GROUND + y
       if (invuln === 0 || Math.floor(invuln * 10) % 2 === 0) {
         ctx.strokeStyle = '#2d1a0e'
-        ctx.lineWidth = 5
-        const spin = scroll / 20
-        for (const wx of [px - 30, px + 30]) {
+        ctx.lineWidth = 6
+        ctx.lineCap = 'round'
+        const spin = scroll / 24
+        for (const wx of [PX - 36, PX + 36]) {
           ctx.beginPath()
-          ctx.arc(wx, py - 18, 18, 0, Math.PI * 2)
+          ctx.arc(wx, py - 24, 24, 0, Math.PI * 2)
           ctx.stroke()
           ctx.beginPath()
-          ctx.moveTo(wx, py - 18)
-          ctx.lineTo(wx + Math.cos(spin) * 18, py - 18 + Math.sin(spin) * 18)
+          ctx.moveTo(wx, py - 24)
+          ctx.lineTo(wx + Math.cos(spin) * 24, py - 24 + Math.sin(spin) * 24)
           ctx.stroke()
         }
         ctx.beginPath()
-        ctx.moveTo(px - 30, py - 18)
-        ctx.lineTo(px, py - 40)
-        ctx.lineTo(px + 30, py - 18)
+        ctx.moveTo(PX - 36, py - 24)
+        ctx.lineTo(PX - 4, py - 50)
+        ctx.lineTo(PX + 36, py - 24)
+        ctx.moveTo(PX + 30, py - 56)
+        ctx.lineTo(PX + 36, py - 24)
         ctx.stroke()
-        drawSprite(ctx, assets.hero, px, py - 30, 110)
+        drawSprite(ctx, assets.hero, PX, py - 40, 140)
       }
       const km = Math.min(TOTAL_KM, (t / TIME) * TOTAL_KM)
       hud(ctx, `🚲 ${km.toFixed(1)} / ${TOTAL_KM} km  第${segment()}段`, hearts(3 - hits.length))
-      // Progress bar
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'
-      ctx.fillRect(24, 64, W - 48, 8)
-      ctx.fillStyle = '#ffcf5c'
-      ctx.fillRect(24, 64, (W - 48) * (t / TIME), 8)
+      // A road map of the lap along the bottom: three segments, a bike marker and the finish flag.
+      const ry = H - 52
+      const rx0 = 40
+      const rx1 = W - 56
+      ctx.save()
+      ctx.fillStyle = 'rgba(30, 18, 10, 0.45)'
+      roundRect(ctx, 16, ry - 34, W - 32, 72, 14)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(255, 246, 224, 0.35)'
+      ctx.lineWidth = 6
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(rx0, ry)
+      ctx.lineTo(rx1, ry)
+      ctx.stroke()
+      ctx.strokeStyle = '#ffcf5c'
+      ctx.beginPath()
+      ctx.moveTo(rx0, ry)
+      ctx.lineTo(rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry)
+      ctx.stroke()
+      ctx.font = `bold 13px ${FONT}`
+      ctx.textAlign = 'center'
+      for (let k = 0; k < 3; k++) {
+        const sx = rx0 + ((rx1 - rx0) * (k + 0.5)) / 3
+        ctx.fillStyle = segment() === k + 1 ? '#ffcf5c' : 'rgba(255, 246, 224, 0.7)'
+        ctx.fillText(`第${k + 1}段`, sx, ry + 26)
+        if (k) {
+          ctx.fillStyle = 'rgba(255, 246, 224, 0.6)'
+          ctx.fillRect(rx0 + ((rx1 - rx0) * k) / 3 - 1, ry - 7, 2, 14)
+        }
+      }
+      ctx.font = '26px serif'
+      ctx.fillText('🏁', rx1 + 16, ry + 9)
+      ctx.fillText('🚲', rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry - 8)
+      ctx.restore()
       if (warn && t < 4) floatText(ctx, `小俑：${warn}`, W / 2, 130, '#ffe9b0', 20)
+      else if (t < 3.5) floatText(ctx, '点击屏幕 / 空格 跳，空中还能再跳一下', W / 2, 130, '#ffe9b0', 19)
     },
     pointer(_x, _y, down) {
       if (down) jump()

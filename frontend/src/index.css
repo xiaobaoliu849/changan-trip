@@ -721,6 +721,21 @@ textarea {
   color: var(--red);
 }
 
+.j-last {
+  margin-top: -2px;
+  font-size: 10.5px;
+  font-weight: bold;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--red);
+}
+
+.j-last.done {
+  color: var(--jade);
+  background: rgba(47, 122, 100, 0.12);
+}
+
 .journey-note {
   margin: 10px 0 0;
   text-align: center;
@@ -833,14 +848,160 @@ textarea {
 
 .final-inner {
   justify-content: flex-start;
-  background: linear-gradient(rgba(255, 246, 224, 0.2), rgba(255, 246, 224, 0.92) 30%, var(--paper) 60%);
+  padding-top: 0;
+  background: var(--paper);
 }
 
-.final-inner h2 {
-  color: var(--red);
-  text-align: center;
-  font-size: 26px;
-  margin-top: 40px;
+/* Full-bleed picture of the pagoda with the traveler standing in the plaza. */
+.final-hero {
+  position: relative;
+  margin: 0 -16px;
+  height: 270px;
+  overflow: hidden;
+  border-radius: 0 0 26px 26px;
+  box-shadow: 0 10px 24px rgba(59, 36, 18, 0.18);
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fh-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  transform: scale(1.08);
+}
+
+.final-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(29, 35, 64, 0) 45%, rgba(59, 36, 18, 0.7));
+}
+
+.fh-me {
+  position: absolute;
+  left: 18px;
+  bottom: 10px;
+  height: 120px;
+  z-index: 1;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35));
+  animation: bob 1.6s ease-in-out infinite alternate;
+}
+
+.fh-title {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  z-index: 1;
+  text-align: right;
+  color: #fff6e0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.fh-title small {
+  font-size: 12px;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+.fh-title h2 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 6px;
+  font-family: 'STKaiti', 'KaiTi', serif;
+}
+
+.trip-sum {
+  background: linear-gradient(135deg, #fffaf0 0%, #fbecc9 100%);
+  border: 2px solid #ecd29c;
+  border-radius: 18px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 6px 18px rgba(138, 90, 43, 0.12);
+  animation: rise 0.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: #8a5a2b;
+}
+
+.ts-head b {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.ts-seals {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ts-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ts-seal .seal {
+  width: 50px;
+  height: 50px;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ts-seal .seal.on {
+  background: rgba(184, 50, 42, 0.08);
+  animation: stamp 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.ts-seal:nth-child(2) .seal.on { animation-delay: 0.15s; }
+.ts-seal:nth-child(3) .seal.on { animation-delay: 0.3s; }
+.ts-seal:nth-child(4) .seal.on { animation-delay: 0.45s; }
+.ts-seal:nth-child(5) .seal.on { animation-delay: 0.6s; }
+
+.ts-seal small {
+  font-size: 11px;
+  color: #8a5a2b;
+  white-space: nowrap;
+}
+
+.say-title {
+  font-size: 15px;
+}
+
+.quick-says {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-says button {
+  border: 1.5px solid #ecd29c;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.quick-says button:hover {
+  transform: translateY(-1px);
+}
+
+.quick-says button.on {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
 }
 
 .stop-tag {
@@ -949,6 +1110,29 @@ textarea {
 .spin {
   width: 140px;
   animation: bob 0.6s ease-in-out infinite alternate;
+}
+
+.recall {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.recall-hero {
+  height: 150px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(59, 36, 18, 0.18));
+}
+
+.recall-xy {
+  width: 96px;
+  animation: bob 0.6s ease-in-out infinite alternate;
+}
+
+.recall-note {
+  margin: 0;
+  font-size: 13px;
+  color: #8a5a2b;
 }
 
 /* passport */
@@ -1130,7 +1314,7 @@ textarea {
   font-weight: bold;
   padding: 4px 12px;
   border-radius: 999px;
-  margin-top: -6px;
+  margin-top: -2px;
 }
 
 /* credits & sponsor logos */
