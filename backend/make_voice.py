@@ -20,13 +20,13 @@ from . import main  # noqa: F401 - loads .env
 from .services import ai
 
 LINES = {
-    "opening": "俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。",
-    "zhonglou": "这是钟楼，六百多岁，比俺年轻多了。跟着钟声敲，可别吵醒全城。",
+    "opening": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
+    "zhonglou": "这是钟楼，六百多岁，比我年轻多了。跟着钟声敲，可别吵醒全城。",
     "huiminjie": "回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。",
-    "bingmayong": "这是俺老家！俺那帮老战友里，总有一个偷偷动了一下。",
+    "bingmayong": "这是我老家！我那帮老战友里，总有一个偷偷动了一下。",
     "chengqiang": "城墙一圈十三点七四公里，骑上车，躲开游客和自拍杆！",
-    "datang": "大唐不夜城比俺那会儿还亮堂，头顶的灯笼可稳住喽。",
-    "dayanta": "大雁塔到了，咱今天这趟没白走。临走前，有啥想对俺说的？俺记小本本上，下回你来，俺还认得你。",
+    "datang": "大唐不夜城比我那会儿还亮堂，头顶的灯笼可稳住喽。",
+    "dayanta": "大雁塔到了，咱今天这趟没白走。临走前，有啥想对我说的？我记小本本上，下回你来，我还认得你。",
 }
 OUT = Path(__file__).resolve().parent.parent / "frontend" / "public" / "assets" / "voice"
 TRIES = 5
@@ -34,9 +34,9 @@ CHECK_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-
 
 
 def _norm(s: str) -> str:
-    # The transcriber writes 俺 as 我, 俑 as its homophone 勇, and 啦/喽 as 了; those are not reading errors.
+    # The transcriber writes 俑 as its homophone 勇, and 啦/喽 as 了; those are not reading errors.
     s = "".join(ch for ch in s if ch.isalnum())
-    for a, b in (("我", "俺"), ("勇", "俑"), ("啦", "了"), ("喽", "了")):
+    for a, b in (("勇", "俑"), ("啦", "了"), ("喽", "了")):
         s = s.replace(a, b)
     return s
 

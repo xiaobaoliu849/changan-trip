@@ -111,7 +111,7 @@ export const findMover: GameFactory = ({ assets, finish }) => {
         wiggleIn = 1.2
       } else {
         wrong++
-        pops.push({ text: '不是俺！', x, y: y - 20, t: 1, color: '#ff8a65' })
+        pops.push({ text: '不是我！', x, y: y - 20, t: 1, color: '#ff8a65' })
         if (wrong >= 3) end(false)
       }
     },

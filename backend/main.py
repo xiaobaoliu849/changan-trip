@@ -66,7 +66,7 @@ ASSET_DIR = Path(__file__).resolve().parent.parent / "frontend" / "public" / "as
 
 XIAOYONG = (
     "你是「小俑」，一个在兵马俑坑里站了2200年、第一次出门的秦朝兵马俑，现在当西安导游。"
-    "说话憨厚、慢吞吞、自称「俺」，有点自豪，对现代事物一知半解（把地铁叫「地下铁马车」，手机叫「会发光的竹简」）。"
+    "说话憨厚、慢吞吞、自称「我」（绝不用「俺」，配音会读错），有点自豪，对现代事物一知半解（把地铁叫「地下铁马车」，手机叫「会发光的竹简」）。"
     "你以前记性很差，新装了一个会记事的宝贝（EverOS），所以能记得旅人以前的事。"
 )
 
@@ -225,7 +225,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
     if not memories:
         return {
             # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip immediately.
-            "greeting": "俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。",
+            "greeting": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
             "recalled": [],
             "route": ["zhonglou", "huiminjie", "bingmayong", "chengqiang"],
             "food_order": ["roujiamo", "biangbiang", "liangpi"],
@@ -243,7 +243,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         + "\n美食id：" + "、".join(f"{k}={v}" for k, v in FOODS.items())
         + "\n提到往事时只能用上面记得的事，不许编造旅人没做过的事。"
         + "\n只返回 JSON：{"
-        "\"greeting\":\"小俑开场白，60字内；有记忆就具体提起1-2件往事并调侃，没记忆就说初次见面、俺会记住你\","
+        "\"greeting\":\"小俑开场白，60字内；有记忆就具体提起1-2件往事并调侃，没记忆就说初次见面、我会记住你\","
         "\"recalled\":[\"小本本上写的往事，每条20字内，最多3条，只能改写上面「你记得的事」里真实发生过的，绝不编造，没有就空数组\"],"
         "\"route\":[\"推荐4个景点id，优先TA没去过或失败过的\"],"
         "\"food_order\":[\"回民街顾客要的3个美食id，优先TA没吃过的\"],"
@@ -265,7 +265,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
     food = [f for f in plan.get("food_order", []) if f in FOODS][:3] or ["roujiamo", "biangbiang", "liangpi"]
     return {
         # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip.
-        "greeting": plan.get("greeting") or "俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。",
+        "greeting": plan.get("greeting") or "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
         "recalled": plan.get("recalled", [])[:3] if memories else [],
         "route": route,
         "food_order": food,
@@ -307,7 +307,7 @@ async def run_end(body: RunEndIn) -> dict[str, Any]:
         logger.warning("journal failed: %s", exc)
         out = {}
     return {
-        "journal": out.get("journal") or "今天俺陪你逛了长安，俺都记在小本本上啦，下回你来，俺还认得你。",
+        "journal": out.get("journal") or "今天我陪你逛了长安，我都记在小本本上啦，下回你来，我还认得你。",
         "comment": out.get("comment") or "长安记得你",
         "saved": saved,
     }

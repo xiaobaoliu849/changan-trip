@@ -100,7 +100,9 @@ async def _chat_json(model: str, content: list[dict[str, Any]]) -> dict[str, Any
         "max_tokens": 1200,
     })
     _check(resp, model)
-    return json.loads(_strip_fence(resp.json()["choices"][0]["message"]["content"]))
+    # 小俑 says 我, never 俺: the voices misread 俺, and the model sometimes slips into it anyway.
+    text = _strip_fence(resp.json()["choices"][0]["message"]["content"]).replace("俺", "我")
+    return json.loads(text)
 
 
 async def generate_json(prompt: str, image_b64: str | None = None, mime: str = "image/jpeg") -> dict[str, Any]:

@@ -28,15 +28,15 @@ const GAMES: Record<StopId, GameFactory> = {
 
 // Pre-made clips in public/assets/voice/ speak these exact lines; regenerate with `python -m backend.make_voice` (keep LINES there in sync).
 // Bump VOICE_VERSION after regenerating so browsers drop cached old clips.
-const VOICE_VERSION = 3
+const VOICE_VERSION = 4
 const clip = (name: string) => `/assets/voice/vo_${name}.mp3?v=${VOICE_VERSION}`
-const OPENING_LINE = '俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。'
+const OPENING_LINE = '我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。'
 const DEFAULT_LINES: Record<StopId, string> = {
-  zhonglou: '这是钟楼，六百多岁，比俺年轻多了。跟着钟声敲，可别吵醒全城。',
+  zhonglou: '这是钟楼，六百多岁，比我年轻多了。跟着钟声敲，可别吵醒全城。',
   huiminjie: '回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。',
-  bingmayong: '这是俺老家！俺那帮老战友里，总有一个偷偷动了一下。',
+  bingmayong: '这是我老家！我那帮老战友里，总有一个偷偷动了一下。',
   chengqiang: '城墙一圈十三点七四公里，骑上车，躲开游客和自拍杆！',
-  datang: '大唐不夜城比俺那会儿还亮堂，头顶的灯笼可稳住喽。',
+  datang: '大唐不夜城比我那会儿还亮堂，头顶的灯笼可稳住喽。',
 }
 
 const DEFAULT_HERO: Hero = {
@@ -48,7 +48,20 @@ const DEFAULT_HERO: Hero = {
   prompt: '穿黄雨衣、挂着相机的背包客',
 }
 
-const WAIT_LINES = ['俺在捏你的泥人……', '俺两千年没干过这活了，稍等……', '俺在给你上色……快好了！']
+// Where each stop sits on map.jpg (pixels of the 1376×768 image), for the route pins.
+const MAP_W = 1376
+const MAP_H = 768
+type Place = StopId | 'dayanta'
+const PLACES: Record<Place, { x: number; y: number; icon: string }> = {
+  zhonglou: { x: 680, y: 262, icon: '🔔' },
+  huiminjie: { x: 500, y: 215, icon: '🥙' },
+  bingmayong: { x: 1232, y: 385, icon: '⚔️' },
+  chengqiang: { x: 1070, y: 258, icon: '🚲' },
+  datang: { x: 170, y: 515, icon: '🏮' },
+  dayanta: { x: 603, y: 555, icon: '🏯' },
+}
+
+const WAIT_LINES =['我在捏你的泥人……', '我两千年没干过这活了，稍等……', '我在给你上色……快好了！']
 const LIVES = 3
 
 type Screen = 'home' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
@@ -227,7 +240,7 @@ export default function App() {
       setEnding(r)
       sayText(r.journal)
     } catch {
-      setEnding({ journal: '今天俺陪你逛了长安，都记在小本本上啦。下回你来，俺还认得你。', comment: '长安记得你' })
+      setEnding({ journal: '今天我陪你逛了长安，都记在小本本上啦。下回你来，我还认得你。', comment: '长安记得你' })
     }
     setEndBusy(false)
   }
@@ -268,9 +281,19 @@ export default function App() {
     fn()
   }
 
+  // Back to the start screen; the home screen wipes this traveler, so ask first unless nothing is lost yet.
+  const goHome = () => {
+    if (screen !== 'greet' && !ending && !window.confirm('回到首页重新开始？这一趟的进度不会保留。')) return
+    stopVoice()
+    setSpeaking(false)
+    setText('')
+    setPhoto(null)
+    setScreen('home')
+  }
+
   const homeLine = firstVisit
-    ? '俺在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉俺。'
-    : '咦，你好像来过？俺翻翻小本本……先告诉俺你今天长啥样。'
+    ? '我在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉我。'
+    : '咦，你好像来过？我翻翻小本本……先告诉我你今天长啥样。'
 
   return (
     <div className="app">
@@ -295,6 +318,15 @@ export default function App() {
           </svg>
         )}
       </button>
+
+      {screen !== 'home' && screen !== 'making' && (
+        <button type="button" className="back" onClick={goHome} aria-label="回到首页" title="回到首页，重新开始">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          首页
+        </button>
+      )}
 
       {screen === 'home' && (
         <div className="screen home">
@@ -357,12 +389,21 @@ export default function App() {
 
       {screen === 'greet' && hero && brief && step === 0 && (
         <div className="screen greet">
+          <div className="greet-head">第 {runNo} 次入城 · 今日行程</div>
           <div className="hero-card">
             <img src={sprite} alt={hero.name} />
-            <div>
+            <div className="hero-info">
+              <span className="hero-tag">今日主角</span>
               <h2>{hero.name}</h2>
               <p className="title">{hero.title}</p>
               <p className="quote">「{hero.catchphrase}」</p>
+              {hero.traits.length > 0 && (
+                <div className="traits">
+                  {hero.traits.slice(0, 3).map((t) => (
+                    <span key={t}>{t}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <Xiaoyong
@@ -378,24 +419,51 @@ export default function App() {
             onStop={handleStopVoice}
           />
           <Notebook items={brief.recalled} source={brief.memory_source} />
-          <div className="map">
-            <img src="/assets/img/map.jpg" alt="西安地图" />
-            <ol className="route">
+          <div className="map-card">
+            <div className="map">
+              <img src="/assets/img/map.jpg" alt="西安地图" />
+              <svg className="map-path" viewBox={`0 0 ${MAP_W} ${MAP_H}`} preserveAspectRatio="none" aria-hidden="true">
+                <polyline
+                  points={[...route, 'dayanta' as const].map((p) => `${PLACES[p].x},${PLACES[p].y}`).join(' ')}
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              {[...route, 'dayanta' as const].map((p, i) => (
+                <div
+                  key={p}
+                  className={`pin${i === 0 ? ' next' : ''}${p === 'dayanta' ? ' goal' : ''}`}
+                  style={{
+                    left: `${(PLACES[p].x / MAP_W) * 100}%`,
+                    top: `${(PLACES[p].y / MAP_H) * 100}%`,
+                    animationDelay: `${0.3 + i * 0.15}s`,
+                  }}
+                >
+                  {p === 'dayanta' ? '🏁' : i + 1}
+                </div>
+              ))}
+            </div>
+            <ol className="journey">
               {route.map((s, i) => (
-                <li key={s}>
-                  <span>{i + 1}</span>
-                  {STOPS[s].name}
+                <li key={s} className={i === 0 ? 'next' : ''}>
+                  <span className="j-icon">
+                    {PLACES[s].icon}
+                    <b>{i + 1}</b>
+                  </span>
+                  <span className="j-name">{STOPS[s].name}</span>
                 </li>
               ))}
-              <li className="route-final">
-                <span>🏁</span>
-                终点：大雁塔（曲江京东MALL旁）
+              <li className="goal">
+                <span className="j-icon">{PLACES.dayanta.icon}</span>
+                <span className="j-name">大雁塔</span>
               </li>
             </ol>
+            <p className="journey-note">闯 {route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）</p>
           </div>
-          <button className="btn big" onClick={goStop}>
-            第一站：{stop ? STOPS[stop].name : ''} →
-          </button>
+          <div className="cta">
+            <button className="btn big go" onClick={goStop}>
+              第一站：{stop ? STOPS[stop].name : ''} →
+            </button>
+          </div>
         </div>
       )}
 
@@ -471,7 +539,7 @@ export default function App() {
                   speaking={speaking}
                   onPlay={() => playWithUnmute(() => say(clip('dayanta')))}
                   onStop={handleStopVoice}
-                  text="大雁塔到了，咱今天这趟没白走。临走前，有啥想对俺说的？俺记小本本上，下回你来，俺还认得你。"
+                  text="大雁塔到了，咱今天这趟没白走。临走前，有啥想对我说的？我记小本本上，下回你来，我还认得你。"
                 />
                 <div className="card">
                   <input value={said} maxLength={50} placeholder="对小俑说一句话（可以不填）" onChange={(e) => setSaid(e.target.value)} />
@@ -500,7 +568,12 @@ export default function App() {
                 />
                 <div className="card postcard">
                   {postcard ? (
-                    <img src={postcard} alt="合影明信片" />
+                    <>
+                      <img src={postcard} alt="合影明信片" />
+                      <a className="btn ghost" href={postcard} download={`大雁塔合影-${hero.name}.png`}>
+                        ⬇ 保存合影明信片
+                      </a>
+                    </>
                   ) : (
                     <button className="btn ghost" onClick={makePostcard} disabled={postcardBusy}>
                       {postcardBusy ? '正在画合影…（约 1 分钟）' : '🖼 和小俑在大雁塔合个影'}

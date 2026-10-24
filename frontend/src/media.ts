@@ -127,6 +127,81 @@ const music = (() => {
 
 export const playMusic = (t: Track) => music.play(t)
 
+// ---------------------------------------------------------------------------
+// Sound effects, synthesized with Web Audio so they need no files and fire with no delay.
+// ---------------------------------------------------------------------------
+
+let sfxCtx: AudioContext | null = null
+const sfx = () => {
+  if (muted) return null
+  sfxCtx ??= new AudioContext()
+  if (sfxCtx.state === 'suspended') void sfxCtx.resume()
+  return sfxCtx
+}
+
+// Bronze bell partials (ratio to the strike note, loudness, seconds to fade): a low hum,
+// the minor third that makes a bell sound like a bell, and bright partials that die fast.
+const BELL = [
+  [0.5, 0.35, 3.2],
+  [1, 0.5, 2.4],
+  [1.19, 0.22, 1.8],
+  [1.5, 0.16, 1.4],
+  [2, 0.18, 1.1],
+  [2.74, 0.1, 0.7],
+  [3.76, 0.07, 0.45],
+] as const
+
+/** 钟楼 bell strike; `bright` (a perfect hit) rings a little louder and higher. */
+export function playBell(bright = false) {
+  const ctx = sfx()
+  if (!ctx) return
+  const t = ctx.currentTime
+  const base = bright ? 330 : 294
+  const out = ctx.createGain()
+  out.gain.value = bright ? 0.5 : 0.4
+  out.connect(ctx.destination)
+  for (const [ratio, amp, decay] of BELL) {
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.frequency.value = base * ratio
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(amp, t + 0.004)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay)
+    osc.connect(g).connect(out)
+    osc.start(t)
+    osc.stop(t + decay)
+  }
+  // The mallet hitting bronze: a very short burst of filtered noise.
+  const len = Math.floor(ctx.sampleRate * 0.05)
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+  const data = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3
+  const noise = ctx.createBufferSource()
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = 2400
+  noise.buffer = buf
+  noise.connect(bp).connect(out)
+  noise.start(t)
+}
+
+/** Dull wooden knock for a miss or an early tap. */
+export function playMiss() {
+  const ctx = sfx()
+  if (!ctx) return
+  const t = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const g = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(180, t)
+  osc.frequency.exponentialRampToValueAtTime(90, t + 0.15)
+  g.gain.setValueAtTime(0.35, t)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18)
+  osc.connect(g).connect(ctx.destination)
+  osc.start(t)
+  osc.stop(t + 0.2)
+}
+
 /** Fallback voice when the TTS model is unavailable: the browser's built-in Chinese speech. */
 export function speakBrowser(text: string): Promise<void> {
   if (muted || typeof speechSynthesis === 'undefined') return Promise.resolve()

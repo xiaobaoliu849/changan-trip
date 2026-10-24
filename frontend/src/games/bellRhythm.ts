@@ -1,3 +1,4 @@
+import { playBell, playMiss } from '../media'
 import { H, W, drawCover, drawSprite, floatText, hearts, hud, type GameFactory } from './engine'
 
 const BELL_X = 150
@@ -29,6 +30,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
 
   const strike = (why: string) => {
     strikes++
+    playMiss()
     pops.push({ text: why, t: 0.8, color: '#ff8a65' })
     if (strikes >= 3) end(false)
   }
@@ -40,7 +42,9 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
       n.hit = true
       hits++
       ring = 0.3
-      pops.push({ text: Math.abs(n.x - BELL_X) < 16 ? '咚！完美' : '咚！', t: 0.6, color: '#ffe066' })
+      const perfect = Math.abs(n.x - BELL_X) < 16
+      playBell(perfect)
+      pops.push({ text: perfect ? '咚！完美' : '咚！', t: 0.6, color: '#ffe066' })
     } else strike('敲早了！')
   }
 

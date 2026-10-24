@@ -375,20 +375,100 @@ textarea {
 }
 
 /* greet */
+.greet {
+  padding-top: 14px;
+}
+
+.greet-head {
+  height: 42px;
+  margin: 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #8a5a2b;
+}
+
+.greet-head::before,
+.greet-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  margin: 0 10px;
+  background: linear-gradient(90deg, transparent, #d9b77a);
+}
+
+.greet-head::after {
+  background: linear-gradient(90deg, #d9b77a, transparent);
+}
+
+.greet > * {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.greet > :nth-child(2) { animation-delay: 0.05s; }
+.greet > :nth-child(3) { animation-delay: 0.12s; }
+.greet > :nth-child(4) { animation-delay: 0.19s; }
+.greet > :nth-child(5) { animation-delay: 0.26s; }
+.greet > :nth-child(6) { animation-delay: 0.33s; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
 .hero-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
-  background: #fffaf0;
-  border-radius: 16px;
-  padding: 10px 14px;
-  border: 2px solid var(--paper-2);
+  background:
+    radial-gradient(circle at 18% 50%, rgba(233, 169, 59, 0.28) 0, transparent 55%),
+    linear-gradient(135deg, #fffaf0 0%, #fbecc9 100%);
+  border-radius: 18px;
+  padding: 10px 16px 10px 10px;
+  border: 2px solid #ecd29c;
+  box-shadow: 0 6px 18px rgba(138, 90, 43, 0.12);
+  overflow: hidden;
+}
+
+.hero-card::after {
+  content: '长安';
+  position: absolute;
+  right: -6px;
+  bottom: -18px;
+  font-size: 64px;
+  font-weight: 900;
+  color: rgba(184, 50, 42, 0.06);
+  pointer-events: none;
 }
 
 .hero-card img {
-  width: 110px;
-  height: 130px;
+  width: 104px;
+  height: 124px;
   object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(59, 36, 18, 0.18));
+  animation: bob 1.6s ease-in-out infinite alternate;
+}
+
+.hero-info h2 {
+  margin: 4px 0 0;
+  font-size: 26px;
+}
+
+.hero-tag {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .hero-card .title {
@@ -403,47 +483,287 @@ textarea {
   opacity: 0.8;
 }
 
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.traits span {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(47, 122, 100, 0.1);
+  color: var(--jade);
+  border: 1px solid rgba(47, 122, 100, 0.25);
+}
+
+.map-card {
+  background: #fffaf0;
+  border: 2px solid #ecd29c;
+  border-radius: 18px;
+  padding: 8px 8px 12px;
+  box-shadow: 0 6px 18px rgba(138, 90, 43, 0.12);
+}
+
 .map {
   position: relative;
 }
 
 .map img {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   display: block;
 }
 
-.route {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0 0;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+.map-path {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.route li {
-  background: var(--paper-2);
-  border-radius: 20px;
-  padding: 4px 10px 4px 4px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.map-path polyline {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 2 7;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 2px #fff);
+  animation: march 1s linear infinite;
 }
 
-.route span {
+@keyframes march {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+.pin {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
   background: var(--red);
   color: #fff;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
   align-items: center;
   justify-content: center;
+  border: 2.5px solid #fff;
+  box-shadow: 0 3px 8px rgba(59, 36, 18, 0.35);
+  animation: pin-drop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.pin.goal {
+  background: linear-gradient(135deg, #ffe08a, var(--gold));
   font-size: 12px;
 }
 
+.pin.next::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 3px solid var(--red);
+  animation: ping 1.6s ease-out infinite;
+}
+
+@keyframes pin-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.4);
+  }
+}
+
+@keyframes ping {
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.journey {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+}
+
+.journey li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+/* Dashed road from each stop to the next one. */
+.journey li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 21px;
+  left: calc(50% + 24px);
+  right: calc(-50% + 24px);
+  border-top: 2px dashed #d9b77a;
+}
+
+.j-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+  background: #fff;
+  border: 2px solid #ecd29c;
+  box-shadow: 0 3px 6px rgba(138, 90, 43, 0.12);
+}
+
+.j-icon b {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fff;
+}
+
+.journey li.next .j-icon {
+  border-color: var(--red);
+  background: #fff3e6;
+  transform: scale(1.08);
+}
+
+.journey li.goal .j-icon {
+  background: linear-gradient(135deg, #fff1c4, #f5cf7a);
+  border-color: var(--gold);
+}
+
+.j-name {
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.25;
+}
+
+.journey li.next .j-name,
+.journey li.goal .j-name {
+  color: var(--red);
+}
+
+.journey-note {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: #8a5a2b;
+}
+
+/* The start button stays reachable at the bottom while the page scrolls. */
+.cta {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 18px 0 6px;
+  background: linear-gradient(rgba(255, 246, 224, 0), var(--paper) 45%);
+}
+
+.cta .btn {
+  width: 100%;
+}
+
+.btn.go {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn.go::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  left: -50%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: shine 3.2s ease-in-out 1s infinite;
+}
+
+@keyframes shine {
+  0%,
+  60% {
+    left: -50%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+
+.back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  height: 42px;
+  padding: 0 14px 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1.5px solid rgba(184, 50, 42, 0.2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 247, 232, 0.9) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow:
+    0 4px 12px rgba(184, 50, 42, 0.1),
+    0 1px 3px rgba(59, 36, 18, 0.06),
+    inset 0 1px 0 #ffffff;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.back:hover {
+  transform: translateY(-1px);
+}
+
+.back:active {
+  transform: scale(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greet > *,
+  .pin,
+  .pin.next::after,
+  .map-path polyline,
+  .btn.go::after,
+  .hero-card img {
+    animation: none;
+  }
+}
 /* intro / final */
 .intro,
 .final {
@@ -718,6 +1038,11 @@ textarea {
   border-radius: 10px;
 }
 
+.postcard a.btn {
+  text-align: center;
+  text-decoration: none;
+}
+
 .card-head {
   display: flex;
   align-items: center;
@@ -746,19 +1071,6 @@ textarea {
 
 .btn.quick-play:hover {
   background: linear-gradient(135deg, #fff0cc 0%, #f3d696 100%);
-}
-
-/* final destination pill on map route */
-.route li.route-final {
-  background: linear-gradient(135deg, #fff3d1 0%, #f7d996 100%);
-  border: 1.5px solid var(--red);
-  color: var(--red);
-  font-weight: bold;
-}
-
-.route li.route-final span {
-  background: #fff;
-  font-size: 13px;
 }
 
 .final-venue {
@@ -885,4 +1197,10 @@ textarea {
 
 .play-hint {
   padding: 0 44px;
+  min-height: 42px;
+  margin-left: 64px;
+  padding-left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
