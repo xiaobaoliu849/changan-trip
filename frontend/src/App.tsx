@@ -1003,28 +1003,29 @@ export default function App() {
                   comment={ending.comment}
                   runNo={runNo}
                   photo={photo?.url}
-                />
-                <div className="card postcard">
-                  {postcard ? (
-                    <>
-                      <img src={postcard} alt="合影明信片" />
-                      <a className="btn ghost" href={postcard} download={`大雁塔合影-${hero.name}.png`}>
-                        ⬇ 保存合影明信片
+                  extra={
+                    postcard ? (
+                      <a className="btn ghost keep" href={postcard} download={`大雁塔合影-${hero.name}.png`}>
+                        ⬇ 保存合影
+                        <small>大雁塔明信片</small>
                       </a>
-                    </>
-                  ) : (
-                    <button className="btn ghost" onClick={makePostcard} disabled={postcardBusy}>
-                      {postcardBusy ? '正在画合影…（约 1 分钟）' : '🖼 和小俑在大雁塔合个影'}
-                    </button>
-                  )}
-                </div>
-                <div className="row">
-                  <button className="btn big replay" onClick={replay}>
+                    ) : (
+                      <button type="button" className="btn ghost keep" onClick={makePostcard} disabled={postcardBusy}>
+                        {postcardBusy ? '正在画合影…' : '📸 大雁塔合影'}
+                        <small>{postcardBusy ? '约 1 分钟' : '和小俑合个影'}</small>
+                      </button>
+                    )
+                  }
+                />
+                {postcard && <img className="postcard-img" src={postcard} alt="和小俑在大雁塔的合影" />}
+                <div className="final-next">
+                  <button type="button" className="btn big replay" onClick={replay}>
                     再游一次
                     <small>再去坑里接小俑，它记得你</small>
                   </button>
                   <button
-                    className="btn ghost"
+                    type="button"
+                    className="link"
                     onClick={() => {
                       stopVoice()
                       resetPlayer()
@@ -1033,7 +1034,7 @@ export default function App() {
                       setScreen('home')
                     }}
                   >
-                    换个主角
+                    换个主角，重新开始
                   </button>
                 </div>
                 <Credits />

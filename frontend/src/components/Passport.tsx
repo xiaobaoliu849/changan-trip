@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { toPng } from 'html-to-image'
 import { STOPS, type Hero, type StopId } from '../api'
 
@@ -10,10 +10,12 @@ interface Props {
   comment: string
   runNo: number
   photo?: string
+  /** Shown beside the save button, same size (the 大雁塔 postcard). */
+  extra?: ReactNode
 }
 
 /** 通关文牒 — doubles as the track's required 主角卡. */
-export default function Passport({ hero, sprite, inGame, stamps, comment, runNo, photo }: Props) {
+export default function Passport({ hero, sprite, inGame, stamps, comment, runNo, photo, extra }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
 
@@ -70,9 +72,13 @@ export default function Passport({ hero, sprite, inGame, stamps, comment, runNo,
         </div>
         <div className="pp-event">WaytoAGI 1024 切磋大会 · 西安曲江京东MALL · 大雁塔纪念</div>
       </div>
-      <button className="btn ghost" onClick={download} disabled={busy}>
-        {busy ? '生成中…' : '⬇ 保存通关文牒（主角卡）'}
-      </button>
+      <div className="keep-row">
+        <button type="button" className="btn ghost keep" onClick={download} disabled={busy}>
+          {busy ? '生成中…' : '⬇ 通关文牒'}
+          <small>{busy ? '马上就好' : '保存主角卡'}</small>
+        </button>
+        {extra}
+      </div>
     </div>
   )
 }
