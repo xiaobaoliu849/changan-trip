@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  STOPS, api, localLog, nextRunNo, pushLocalLog,
+  STOPS, api, nextRunNo, pushLocalLog, resetPlayer,
   type Brief, type Hero, type StopId, type StopResult,
 } from './api'
-import { cutOutWhite, fileToBase64, loadImage, playVoice, setMuted, stopVoice } from './media'
+import {
+  cutOutWhite, fileToBase64, loadImage, playMusic, playVoice, setMuted, speakBrowser, stopVoice, voiceTicket,
+  type Track,
+} from './media'
 import Xiaoyong, { Notebook } from './components/Xiaoyong'
 import Passport from './components/Passport'
-import Credits from './components/Credits'
 import GameCanvas from './games/GameCanvas'
 import type { Assets, GameFactory } from './games/engine'
 import { catchFood } from './games/catchFood'
@@ -23,6 +25,11 @@ const GAMES: Record<StopId, GameFactory> = {
   datang: lanternBalance,
 }
 
+// Pre-made clips in public/assets/voice/ speak these exact lines; regenerate with `python -m backend.make_voice` (keep LINES there in sync).
+// Bump VOICE_VERSION after regenerating so browsers drop cached old clips.
+const VOICE_VERSION = 3
+const clip = (name: string) => `/assets/voice/vo_${name}.mp3?v=${VOICE_VERSION}`
+const OPENING_LINE = '俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。'
 const DEFAULT_LINES: Record<StopId, string> = {
   zhonglou: '这是钟楼，六百多岁，比俺年轻多了。跟着钟声敲，可别吵醒全城。',
   huiminjie: '回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。',
@@ -44,6 +51,9 @@ const WAIT_LINES = ['俺在捏你的泥人……', '俺两千年没干过这活�
 const LIVES = 3
 
 type Screen = 'home' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
+const SCREEN_MUSIC: Record<Screen, Track> = {
+  home: 'town', making: 'town', greet: 'town', intro: 'town', result: 'town', play: 'game', final: 'finale',
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
@@ -74,7 +84,12 @@ export default function App() {
 
   const route = brief?.route ?? []
   const stop = route[step]
-  const firstVisit = localLog().length === 0
+  const firstVisit = true
+
+  useEffect(() => {
+    if (screen === 'home') resetPlayer()
+    playMusic(SCREEN_MUSIC[screen])
+  }, [screen])
 
   useEffect(() => {
     if (screen !== 'making') return
@@ -92,7 +107,17 @@ export default function App() {
     setSpeaking(false)
   }
 
-  const sayText = (line: string) => say(api.tts(line).then((r) => r.audio))
+  const sayText = async (line: string) => {
+    const ticket = voiceTicket()
+    setSpeaking(true)
+    try {
+      const { audio } = await api.tts(line)
+      if (ticket === voiceTicket()) await playVoice(audio)
+    } catch {
+      if (ticket === voiceTicket()) await speakBrowser(line)
+    }
+    setSpeaking(false)
+  }
 
   const startRun = async (h: Hero, rawSprite: string) => {
     const no = nextRunNo()
@@ -109,7 +134,7 @@ export default function App() {
     const [cut, b] = await Promise.all([
       cutOutWhite(rawSprite),
       api.brief(h, no).catch((): Brief => ({
-        greeting: '俺叫小俑，第一次出坑！没事，俺会记住你的。',
+        greeting: OPENING_LINE,
         recalled: [], route: ['huiminjie', 'bingmayong', 'chengqiang', 'datang'],
         food_order: ['roujiamo', 'biangbiang', 'liangpi'], spicy_tease: false, wall_warn: '',
         stop_lines: {}, memory_source: 'none',
@@ -119,12 +144,14 @@ export default function App() {
     setSprite(cut)
     setBrief(b)
     setScreen('greet')
-    if (no === 1 && b.memory_source === 'none') say('/assets/voice/vo_opening.mp3')
+    // The pre-made clip only when it says exactly what is on screen.
+    if (b.greeting === OPENING_LINE) say(clip('opening'))
     else sayText(b.greeting)
   }
 
   const create = async (useDefault = false) => {
     setError('')
+    resetPlayer()
     setScreen('making')
     try {
       if (useDefault) {
@@ -155,7 +182,9 @@ export default function App() {
     ])
     setAssets({ bg, hero: heroImg, xiaoyong: xy })
     setScreen('intro')
-    say(`/assets/voice/vo_${stop}.mp3`)
+    const line = brief?.stop_lines[stop]
+    if (line) sayText(line)
+    else say(clip(stop))
   }
 
   const onDone = (r: StopResult) => {
@@ -175,7 +204,7 @@ export default function App() {
     const out = lives <= 0 || step + 1 >= route.length
     if (out) {
       setScreen('final')
-      say('/assets/voice/vo_dayanta.mp3')
+      say(clip('dayanta'))
     } else {
       setStep(step + 1)
       setScreen('greet')
@@ -219,26 +248,65 @@ export default function App() {
   )
 
   const toggleMute = () => {
-    setMuted(!muted)
-    setMute(!muted)
+    const nextMuted = !muted
+    setMuted(nextMuted)
+    setMute(nextMuted)
+    if (nextMuted) setSpeaking(false)
   }
+
+  const handleStopVoice = () => {
+    stopVoice()
+    setSpeaking(false)
+  }
+
+  const playWithUnmute = (fn: () => void) => {
+    if (muted) {
+      setMuted(false)
+      setMute(false)
+    }
+    fn()
+  }
+
+  const homeLine = firstVisit
+    ? '俺在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉俺。'
+    : '咦，你好像来过？俺翻翻小本本……先告诉俺你今天长啥样。'
 
   return (
     <div className="app">
-      <button className="mute" onClick={toggleMute} aria-label="静音">
-        {muted ? '🔇' : '🔊'}
+      <button
+        type="button"
+        className={`mute ${muted ? 'is-muted' : 'is-active'} ${speaking && !muted ? 'is-speaking' : ''}`}
+        onClick={toggleMute}
+        aria-label={muted ? '开启声音' : '静音'}
+        title={muted ? '点击开启声音' : '点击静音'}
+      >
+        {muted ? (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 5L6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5z" fill="currentColor" fillOpacity="0.18" />
+            <line x1="22" y1="9" x2="16" y2="15" />
+            <line x1="16" y1="9" x2="22" y2="15" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 5L6 9H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l5 4V5z" fill="currentColor" fillOpacity="0.2" />
+            <path className="wave wave-1" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            <path className="wave wave-2" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+        )}
       </button>
 
       {screen === 'home' && (
         <div className="screen home">
-          <div className="event-badge">WaytoAGI 1024 切磋大会 · 游戏赛道</div>
           <h1>
             长安记得你
             <small>陪一个健忘的兵马俑逛西安</small>
           </h1>
           <Xiaoyong
             mood={firstVisit ? 'confused' : 'happy'}
-            text={firstVisit ? '俺在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉俺。' : '咦，你好像来过？俺翻翻小本本……先告诉俺你今天长啥样。'}
+            speaking={speaking}
+            onPlay={() => playWithUnmute(() => sayText(homeLine))}
+            onStop={handleStopVoice}
+            text={homeLine}
           />
           <div className="card">
             <label>一句话描述你的旅行主角</label>
@@ -273,7 +341,6 @@ export default function App() {
             {error && <p className="error">{error}</p>}
           </div>
           <p className="tip">游戏有语音，建议开声音 · 手机和电脑都能玩</p>
-          <Credits />
         </div>
       )}
 
@@ -294,7 +361,18 @@ export default function App() {
               <p className="quote">「{hero.catchphrase}」</p>
             </div>
           </div>
-          <Xiaoyong mood={brief.recalled.length ? 'happy' : 'confused'} text={brief.greeting} speaking={speaking} />
+          <Xiaoyong
+            mood={brief.recalled.length ? 'happy' : 'confused'}
+            text={brief.greeting}
+            speaking={speaking}
+            onPlay={() =>
+              playWithUnmute(() => {
+                if (brief.greeting === OPENING_LINE) say(clip('opening'))
+                else sayText(brief.greeting)
+              })
+            }
+            onStop={handleStopVoice}
+          />
           <Notebook items={brief.recalled} source={brief.memory_source} />
           <div className="map">
             <img src="/assets/img/map.jpg" alt="西安地图" />
@@ -319,7 +397,18 @@ export default function App() {
             <div className="stop-tag">
               第 {step + 1} 站 · {STOPS[stop].name}
             </div>
-            <Xiaoyong text={brief?.stop_lines[stop] || DEFAULT_LINES[stop]} speaking={speaking} />
+            <Xiaoyong
+              text={brief?.stop_lines[stop] || DEFAULT_LINES[stop]}
+              speaking={speaking}
+              onPlay={() =>
+                playWithUnmute(() => {
+                  const line = brief?.stop_lines[stop]
+                  if (line) sayText(line)
+                  else say(clip(stop))
+                })
+              }
+              onStop={handleStopVoice}
+            />
             <div className="card how">
               <b>玩法</b>
               <p>{STOPS[stop].hint}</p>
@@ -371,6 +460,8 @@ export default function App() {
                 <Xiaoyong
                   mood="happy"
                   speaking={speaking}
+                  onPlay={() => playWithUnmute(() => say(clip('dayanta')))}
+                  onStop={handleStopVoice}
                   text="大雁塔到了，咱今天这趟没白走。临走前，有啥想对俺说的？俺记小本本上，下回你来，俺还认得你。"
                 />
                 <div className="card">
@@ -382,7 +473,13 @@ export default function App() {
               </>
             ) : (
               <>
-                <Xiaoyong mood="happy" speaking={speaking} text={ending.journal} />
+                <Xiaoyong
+                  mood="happy"
+                  speaking={speaking}
+                  onPlay={() => playWithUnmute(() => sayText(ending.journal))}
+                  onStop={handleStopVoice}
+                  text={ending.journal}
+                />
                 <Passport
                   hero={hero}
                   sprite={sprite}
@@ -397,7 +494,7 @@ export default function App() {
                     <img src={postcard} alt="合影明信片" />
                   ) : (
                     <button className="btn ghost" onClick={makePostcard} disabled={postcardBusy}>
-                      {postcardBusy ? '正在画合影…（约 15 秒）' : '🖼 和小俑在大雁塔合个影'}
+                      {postcardBusy ? '正在画合影…（约 1 分钟）' : '🖼 和小俑在大雁塔合个影'}
                     </button>
                   )}
                 </div>
@@ -409,13 +506,15 @@ export default function App() {
                     className="btn ghost"
                     onClick={() => {
                       stopVoice()
+                      resetPlayer()
+                      setText('')
+                      setPhoto(null)
                       setScreen('home')
                     }}
                   >
                     换个主角
                   </button>
                 </div>
-                <Credits />
               </>
             )}
           </div>

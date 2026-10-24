@@ -32,7 +32,7 @@ export const STOPS: Record<StopId, { name: string; stamp: string; hint: string }
   huiminjie: { name: '回民街', stamp: '吃货', hint: '←→ 或拖动接住客人点的美食，每样接 3 份，接到 3 个辣子就辣晕了' },
   bingmayong: { name: '兵马俑', stamp: '战友', hint: '盯紧！有个俑会偷偷动一下，点中它。找到 3 次过关，点错 3 次失败' },
   chengqiang: { name: '城墙', stamp: '骑士', hint: '点击屏幕 / 按空格跳起来，躲开游客和自拍杆，撞 3 次失败' },
-  datang: { name: '大唐不夜城', stamp: '灯会', hint: '灯笼往哪边倒，就按住哪边（←→ 或屏幕左右两侧），坚持 30 秒走完步行街' },
+  datang: { name: '大唐不夜城', stamp: '灯会', hint: '灯笼往哪边歪，就按住哪边把它扶正（←→ 键，或按住屏幕左右半边）。前 3 秒是热身，坚持 30 秒走完步行街，掉 3 次失败' },
 }
 
 export const FOODS: Record<FoodId, { name: string; emoji: string }> = {
@@ -47,6 +47,17 @@ const LS_PLAYER = 'changan.player'
 const LS_LOG = 'changan.log'
 const LS_RUNS = 'changan.runs'
 
+if (typeof window !== 'undefined' && (window.location.search.includes('new=1') || window.location.search.includes('reset=1'))) {
+  try {
+    localStorage.removeItem(LS_PLAYER)
+    localStorage.removeItem(LS_LOG)
+    localStorage.removeItem(LS_RUNS)
+    window.history.replaceState({}, '', window.location.pathname)
+  } catch {
+    /* ignore */
+  }
+}
+
 function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -60,6 +71,16 @@ function safeSet(key: string, value: string) {
     localStorage.setItem(key, value)
   } catch {
     /* storage unavailable: memory still lives in EverOS */
+  }
+}
+
+export function resetPlayer() {
+  try {
+    localStorage.removeItem(LS_PLAYER)
+    localStorage.removeItem(LS_LOG)
+    localStorage.removeItem(LS_RUNS)
+  } catch {
+    /* ignore */
   }
 }
 

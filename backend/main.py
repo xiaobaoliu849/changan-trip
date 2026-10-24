@@ -1,6 +1,6 @@
 """长安记得你 — FastAPI backend.
 
-Holds the Gemini and EverOS keys, and serves the built frontend from ../frontend/dist.
+Holds the AI gateway and EverOS keys, and serves the built frontend from ../frontend/dist.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .services import gemini
+from .services import ai
 from .services.evermem_service import EverMemService
 
 def _load_dotenv() -> None:
@@ -35,6 +35,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("changan")
 
 app = FastAPI(title="长安记得你")
+
+
+@app.middleware("http")
+async def revalidate_voice(request, call_next):
+    """Voice clips keep their filenames when regenerated; make browsers check the ETag every time."""
+    response = await call_next(request)
+    if request.url.path.startswith("/assets/voice/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 memory = EverMemService(os.getenv("EVEROS_API_URL", "https://api.evermind.ai"), os.getenv("EVEROS_API_KEY"))
 MEMORY_TIMEOUT = float(os.getenv("EVEROS_TIMEOUT", "4"))
 
@@ -169,7 +179,8 @@ async def _remember(player_id: str, run_id: str, content: str, *, role: str = "a
 @app.get("/api/health")
 async def health() -> dict[str, Any]:
     return {
-        "gemini": bool(os.getenv("GEMINI_API_KEY")),
+        "ai": ai.configured(),
+        "models": {"text": ai.TEXT_MODEL, "image": ai.IMAGE_MODEL, "tts_live": ai.GEMINI_TTS_VOICE if ai.LIVE_TTS == "gemini" else ai.TTS_VOICE},
         "everos": bool(os.getenv("EVEROS_API_KEY")),
     }
 
@@ -186,16 +197,20 @@ async def make_hero(body: HeroIn) -> dict[str, Any]:
         "\"look\":\"英文外观描述，30词内，用于画Q版角色\"}"
     )
     try:
-        info = await gemini.generate_json(prompt, body.photo_b64, body.photo_mime)
+        info = await ai.generate_json(prompt, body.photo_b64, body.photo_mime)
         hero = Hero(**{**info, "prompt": body.text.strip()})
         art = (
-            f"Cute chibi game character, full body, front view, standing: {hero.look}. "
-            "Traveler visiting Xi'an. Flat illustration game sprite style with clean dark-brown outlines, "
-            "warm colors, big head small body, plain pure white background, no text, single character only."
+            # No place names here: "visiting Xi'an" made gpt-image-2 paint city walls behind the sprite,
+            # which the frontend's white cut-out can't remove. (Its background=transparent fakes a checkerboard.)
+            f"Cute chibi game character sprite, full body, front view, standing: {hero.look}. "
+            "Flat illustration with clean dark-brown outlines, warm colors, big head small body. "
+            "The character stands alone, isolated on a plain solid pure white background (#FFFFFF): "
+            "no scenery, no buildings, no ground, no shadow, no props around, no text."
         )
         if body.photo_b64:
             art = "Turn the person or pet in this photo into a " + art[0].lower() + art[1:]
-        sprite = await gemini.generate_image(art, "1:1", body.photo_b64, body.photo_mime)
+        refs = [(body.photo_b64, body.photo_mime)] if body.photo_b64 else None
+        sprite = await ai.generate_image(art, "1:1", refs)
     except Exception as exc:  # noqa: BLE001
         logger.exception("hero generation failed")
         raise HTTPException(502, f"生成主角失败：{exc}") from exc
@@ -205,8 +220,20 @@ async def make_hero(body: HeroIn) -> dict[str, Any]:
 @app.post("/api/brief")
 async def brief(body: BriefIn) -> dict[str, Any]:
     """Start of a run: recall the traveler and decide how 小俑 greets them and what changes."""
-    remote = await _recall(body.player_id)
-    memories = remote or body.local_log[-8:]
+    remote = await _recall(body.player_id) if body.run_no > 1 else []
+    memories = (remote or body.local_log[-8:]) if body.run_no > 1 else []
+    if not memories:
+        return {
+            # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip immediately.
+            "greeting": "俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。",
+            "recalled": [],
+            "route": ["zhonglou", "huiminjie", "bingmayong", "chengqiang"],
+            "food_order": ["roujiamo", "biangbiang", "liangpi"],
+            "spicy_tease": any("辣" in t for t in body.hero.traits),
+            "wall_warn": "",
+            "stop_lines": {},
+            "memory_source": "none",
+        }
     prompt = (
         XIAOYONG
         + f"\n旅人：{body.hero.name}（{body.hero.title}），偏好：{'、'.join(body.hero.traits) or '未知'}。"
@@ -214,9 +241,10 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         + ("你记得的事：\n- " + "\n- ".join(memories) if memories else "你对TA没有任何记忆，这是第一次见面。")
         + "\n景点id：" + "、".join(f"{k}={v}" for k, v in STOPS.items())
         + "\n美食id：" + "、".join(f"{k}={v}" for k, v in FOODS.items())
+        + "\n提到往事时只能用上面记得的事，不许编造旅人没做过的事。"
         + "\n只返回 JSON：{"
         "\"greeting\":\"小俑开场白，60字内；有记忆就具体提起1-2件往事并调侃，没记忆就说初次见面、俺会记住你\","
-        "\"recalled\":[\"小本本上写的往事，每条20字内，最多3条，没有就空数组\"],"
+        "\"recalled\":[\"小本本上写的往事，每条20字内，最多3条，只能改写上面「你记得的事」里真实发生过的，绝不编造，没有就空数组\"],"
         "\"route\":[\"推荐4个景点id，优先TA没去过或失败过的\"],"
         "\"food_order\":[\"回民街顾客要的3个美食id，优先TA没吃过的\"],"
         "\"spicy_tease\":TA怕辣或上次被辣到就true,"
@@ -224,7 +252,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         "\"stop_lines\":{\"景点id\":\"到该景点时小俑说的一句话，25字内，能结合记忆就结合\"}}"
     )
     try:
-        plan = await gemini.generate_json(prompt)
+        plan = await ai.generate_json(prompt)
     except Exception as exc:  # noqa: BLE001
         logger.warning("brief generation failed: %s", exc)
         plan = {}
@@ -236,6 +264,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
             route.append(s)
     food = [f for f in plan.get("food_order", []) if f in FOODS][:3] or ["roujiamo", "biangbiang", "liangpi"]
     return {
+        # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip.
         "greeting": plan.get("greeting") or "俺叫小俑，第一次出坑！你是谁呀？没事，俺会记住你的。",
         "recalled": plan.get("recalled", [])[:3] if memories else [],
         "route": route,
@@ -273,7 +302,7 @@ async def run_end(body: RunEndIn) -> dict[str, Any]:
         "\"comment\":\"给旅人的一句评语，印在通关文牒上，16字内\"}"
     )
     try:
-        out = await gemini.generate_json(prompt)
+        out = await ai.generate_json(prompt)
     except Exception as exc:  # noqa: BLE001
         logger.warning("journal failed: %s", exc)
         out = {}
@@ -290,7 +319,7 @@ async def speak(body: TtsIn) -> dict[str, str]:
     if not text:
         raise HTTPException(400, "empty text")
     try:
-        return {"audio": await gemini.tts(text)}
+        return {"audio": await ai.tts(text)}
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, str(exc)) from exc
 
@@ -306,18 +335,8 @@ async def postcard(body: PostcardIn) -> dict[str, str]:
     )
     try:
         xiaoyong = base64.b64encode((ASSET_DIR / "img" / "xiaoyong.png").read_bytes()).decode()
-        image = await gemini._generate(gemini.IMAGE_MODEL, {
-            "contents": [{"parts": [
-                {"inlineData": {"mimeType": mime, "data": data}},
-                {"inlineData": {"mimeType": "image/png", "data": xiaoyong}},
-                {"text": parts_hint},
-            ]}],
-            "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": "4:3"}},
-        })
-        for p in gemini._parts(image):
-            if "inlineData" in p:
-                return {"image": f"data:{p['inlineData']['mimeType']};base64,{p['inlineData']['data']}"}
-        raise RuntimeError("no image")
+        image = await ai.generate_image(parts_hint, "4:3", [(data, mime), (xiaoyong, "image/png")])
+        return {"image": image}
     except Exception as exc:  # noqa: BLE001
         logger.exception("postcard failed")
         raise HTTPException(502, str(exc)) from exc
