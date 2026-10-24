@@ -28,6 +28,7 @@ export default function Prologue({ speaking, say, onStop, onDone }: Props) {
   const [step, setStep] = useState<Step>('arrive')
   const [miss, setMiss] = useState(-1)
   const done = useRef(false)
+  const leaving = useRef(false)
 
   useEffect(() => {
     if (step !== 'arrive') return
@@ -54,6 +55,9 @@ export default function Prologue({ speaking, say, onStop, onDone }: Props) {
   }
 
   const leave = async () => {
+    // A ref, not step: a fast double tap fires twice before the re-render.
+    if (leaving.current) return
+    leaving.current = true
     setStep('go')
     // Let 小俑 finish the line (the next screen's greeting would cut it off), but never hang on audio.
     const min = new Promise((r) => setTimeout(r, 1200))
@@ -65,9 +69,12 @@ export default function Prologue({ speaking, say, onStop, onDone }: Props) {
 
   return (
     <div className="screen prologue">
-      <button type="button" className="skip" onClick={() => finish(null)}>
-        跳过 ›
-      </button>
+      {/* Once the traveler has said 走, skipping would only drop their answer. */}
+      {step !== 'go' && (
+        <button type="button" className="skip" onClick={() => finish(null)}>
+          跳过 ›
+        </button>
+      )}
       <div className={`pit${awake ? ' awake' : ''}`} onClick={() => step === 'arrive' && setStep('spot')}>
         <div className="pit-row">
           {Array.from({ length: ROW }, (_, i) => (

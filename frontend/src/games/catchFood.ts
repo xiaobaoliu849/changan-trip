@@ -39,7 +39,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
     const extra = Object.keys(caught).filter((k) => k !== 'chili' && k !== 'bonus' && !order.includes(k as FoodId))
     // 你 is the traveler, who eats for 小俑; it is swapped for the hero's name when this goes into memory.
     const detail =
-      `小俑点了${order.map((f) => FOODS[f].name).join('、')}让你替它吃；你接到${got || '什么都没接到'}` +
+      `小俑点了${order.map((f) => FOODS[f].name).join('、')}让你替它吃；${got ? `你接到${got}` : '你什么都没接到'}` +
       (extra.length ? `（还顺手接了不在单子上的${extra.map((k) => FOODS[k as FoodId].name).join('、')}）` : '') +
       `；你被辣子辣到${chili}次` +
       (passed ? `，${Math.round(TIME - time)}秒凑齐了小俑点的菜` : chili >= 3 ? '，你辣晕了' : `，时间到还差${remaining()}份`)

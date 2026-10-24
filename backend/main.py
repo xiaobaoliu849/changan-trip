@@ -288,8 +288,8 @@ async def stop_done(body: StopIn) -> dict[str, Any]:
     place = STOPS.get(body.stop, body.stop)
     line = (
         f"第{body.run_no}次游西安，{body.hero.name}带小俑到了{place}，"
-        # Game summaries call the player 你; in memory 你 would read as whoever 小俑 is talking to.
-        f"{'过关了' if body.passed else '没过关'}：{body.detail.replace('你', body.hero.name)}"
+        # detail comes already in the third person (the frontend names the traveler).
+        f"{'过关了' if body.passed else '没过关'}：{body.detail}"
     )
     saved = await _remember(body.player_id, body.run_id, line)
     return {"saved": saved, "line": line}

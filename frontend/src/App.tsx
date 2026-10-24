@@ -329,13 +329,15 @@ export default function App() {
     if (!stop || !hero) return
     setResult(r)
     if (r.snapshot && (r.passed || !snapshot)) setSnapshot(r.snapshot)
-    // Game summaries call the player 你; memory is told in the third person, so name them.
-    const line = `${STOPS[stop].name}：${r.detail.split('你').join(hero.name)}`
+    // Game summaries call the player 你 (shown as is on the result screen); memory is told in the
+    // third person, so the traveler is named there. Only catchFood uses 你 today.
+    const told = r.detail.split('你').join(hero.name)
+    const line = `${STOPS[stop].name}：${told}`
     setLog((l) => [...l, line])
     pushLocalLog(`第${runNo}次游西安，${hero.name}带小俑到了${line}`)
     if (r.passed) setStamps((s) => [...s, stop])
     else setLives((n) => n - 1)
-    api.stop(runId, runNo, hero, stop, r).catch(() => undefined)
+    api.stop(runId, runNo, hero, stop, { ...r, detail: told }).catch(() => undefined)
     setAnswer(null)
     setReplyDone(false)
     setScreen('result')

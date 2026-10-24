@@ -135,7 +135,7 @@ export const api = {
     post<{ journal: string; comment: string; saved: boolean }>('run_end', {
       player_id: playerId(), run_id: runId, run_no: runNo, hero, stamps, log, said,
     }),
-  note: (runId: string, text: string, role: 'assistant' | 'user' = 'assistant') =>
+  note: (runId: string, text: string, role: 'assistant' | 'user') =>
     post<{ saved: boolean }>('note', { player_id: playerId(), run_id: runId, text, role }),
   tts: (text: string) => post<{ audio: string }>('tts', { text }),
   postcard: (hero: Hero, sprite: string) => post<{ image: string }>('postcard', { hero, sprite }),

@@ -170,21 +170,28 @@ async def _agent_platform_pcm(text: str, key: str) -> bytes:
         },
     )
     _check(resp, GEMINI_TTS_MODEL)
-    parts = resp.json()["candidates"][0]["content"]["parts"]
+    candidates = resp.json().get("candidates") or [{}]
+    parts = candidates[0].get("content", {}).get("parts", [])
     audio = [p["inlineData"]["data"] for p in parts if "inlineData" in p]
     if not audio:
         raise RuntimeError("Gemini returned no audio")
     return base64.b64decode(audio[-1])
 
 
+def _as_pcm(raw: bytes) -> bytes:
+    """Unwrap a WAV (unary replies come as one) to the raw 24 kHz mono 16-bit PCM every caller assumes."""
+    if raw[:4] != b"RIFF":
+        return raw
+    with wave.open(io.BytesIO(raw)) as w:
+        if (w.getframerate(), w.getnchannels(), w.getsampwidth()) != (24000, 1, 2):
+            raise RuntimeError(f"unexpected TTS audio: {w.getframerate()} Hz, {w.getnchannels()} ch, {w.getsampwidth() * 8} bit")
+        return w.readframes(w.getnframes())
+
+
 async def gemini_pcm(text: str) -> bytes:
     """Speak exactly ``text`` with Gemini TTS; return raw 24 kHz mono 16-bit PCM."""
     if agent_key := os.getenv("AGENT_PLATFORM_API_KEY", ""):
-        raw = await _agent_platform_pcm(text, agent_key)
-        if raw[:4] == b"RIFF":
-            with wave.open(io.BytesIO(raw)) as w:
-                raw = w.readframes(w.getnframes())
-        return raw
+        return _as_pcm(await _agent_platform_pcm(text, agent_key))
     key = os.getenv("GEMINI_API_KEY", "")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is not set")
@@ -208,11 +215,7 @@ async def gemini_pcm(text: str) -> bytes:
              for c in step.get("content", []) if c.get("type") == "audio"]
     if not audio:
         raise RuntimeError("Gemini returned no audio")
-    raw = base64.b64decode(audio[-1]["data"])
-    if raw[:4] == b"RIFF":  # unary requests return a full WAV
-        with wave.open(io.BytesIO(raw)) as w:
-            raw = w.readframes(w.getnframes())
-    return raw
+    return _as_pcm(base64.b64decode(audio[-1]["data"]))
 
 
 def pcm_to_wav(pcm: bytes) -> bytes:

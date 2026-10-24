@@ -112,13 +112,13 @@ def max_secs(text: str) -> float:
 
 async def best_take(text: str) -> tuple[bytes, str, float]:
     best: tuple[bytes, str, float] = (b"", "", -1.0)
-    for _ in range(TRIES):
+    for attempt in range(TRIES):
         try:
             pcm = trim_silence(await ai.gemini_pcm(text))
             heard = await transcribe(pcm)
         except Exception as exc:  # noqa: BLE001 - flaky network: just take another go
             print(f"  retry ({exc!s:.80})")
-            if "429" in str(exc):  # rate limit: give the per-minute quota time to refill
+            if "429" in str(exc) and attempt < TRIES - 1:  # rate limit: let the per-minute quota refill
                 await asyncio.sleep(40)
             continue
         score = difflib.SequenceMatcher(None, _norm(text), _norm(heard)).ratio()
