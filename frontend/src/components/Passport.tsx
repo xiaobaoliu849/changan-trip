@@ -143,8 +143,10 @@ export default function Passport({ hero, sprite, shots, stamps, route, comment, 
               <p>{comment}</p>
               <small>—— 小俑 押</small>
             </div>
+            {/* Two rows read left to right; vertical columns read right-first came out as 县长印安. */}
             <span className="pp-bigseal" aria-hidden="true">
-              长安县印
+              <span>长安</span>
+              <span>县印</span>
             </span>
           </section>
 
