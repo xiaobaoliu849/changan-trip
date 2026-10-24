@@ -10,6 +10,49 @@ interface Item {
 
 const NEED_EACH = 3
 const TIME = 35
+const SIZE = 68 // falling dish, px
+
+// Drawn sprites (python -m backend.make_food); loaded on import so they are ready by the intro screen.
+// Until one arrives its emoji stands in.
+const sprites = Object.fromEntries(
+  (Object.keys(FOODS) as FoodId[]).map((f) => {
+    const img = new Image()
+    img.src = `/assets/img/food_${f}.png`
+    return [f, img]
+  }),
+) as Record<FoodId, HTMLImageElement>
+
+// Fits the order card; the falling tags use the same text so the two match at a glance.
+const shortName = (f: FoodId) => FOODS[f].name.replace('biangbiang', 'biang').replace('羊肉泡馍', '泡馍')
+
+/** Draw dish ``f`` fitted into a ``size`` box centred on (x, y). */
+function drawFood(ctx: CanvasRenderingContext2D, f: FoodId, x: number, y: number, size: number) {
+  const img = sprites[f]
+  if (img.complete && img.naturalWidth) {
+    const s = size / Math.max(img.naturalWidth, img.naturalHeight)
+    const w = img.naturalWidth * s
+    const h = img.naturalHeight * s
+    ctx.drawImage(img, x - w / 2, y - h / 2, w, h)
+  } else {
+    ctx.font = `${Math.round(size * 0.7)}px serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(FOODS[f].emoji, x, y)
+  }
+}
+
+/** Name pill under a falling item: gold when 小俑 ordered it, so the player knows what to chase. */
+function tag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, bg: string, fg: string) {
+  ctx.font = 'bold 13px "PingFang SC", "Microsoft YaHei", sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  const w = ctx.measureText(text).width + 14
+  ctx.fillStyle = bg
+  roundRect(ctx, x - w / 2, y - 10, w, 20, 10)
+  ctx.fill()
+  ctx.fillStyle = fg
+  ctx.fillText(text, x, y + 1)
+}
 
 export const catchFood: GameFactory = ({ assets, finish, options }) => {
   const order = ((options.food_order as FoodId[]) || ['roujiamo', 'biangbiang', 'liangpi']).slice(0, 3)
@@ -108,16 +151,17 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       ctx.fillStyle = '#5a2d12'
       ctx.textAlign = 'left'
       ctx.fillText('小俑点', 22, 92)
-      ctx.font = 'bold 15px "PingFang SC", "Microsoft YaHei", sans-serif'
       order.forEach((f, i) => {
         const done = Math.min(NEED_EACH, caught[f] || 0)
-        const name = FOODS[f].name.replace('biangbiang', 'biang')
+        const left = 84 + i * ((W - 96) / 3)
+        drawFood(ctx, f, left + 15, 92, 32)
+        ctx.font = 'bold 15px "PingFang SC", "Microsoft YaHei", sans-serif'
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'middle'
         ctx.fillStyle = done >= NEED_EACH ? '#2f7a64' : '#5a2d12'
-        ctx.fillText(`${FOODS[f].emoji}${name} ${done}/${NEED_EACH}`, 72 + i * ((W - 90) / 3), 92)
+        ctx.fillText(`${shortName(f)} ${done}/${NEED_EACH}`, left + 34, 92)
       })
       for (const it of items) {
-        ctx.font = '44px serif'
-        ctx.textAlign = 'center'
         if (it.kind === 'bonus') {
           ctx.save()
           ctx.fillStyle = '#ffd34d'
@@ -128,7 +172,18 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
           ctx.font = 'bold 16px sans-serif'
           ctx.fillText('1024', it.x, it.y - 9)
           ctx.restore()
-        } else ctx.fillText(it.kind === 'chili' ? '🌶️' : FOODS[it.kind].emoji, it.x, it.y)
+        } else if (it.kind === 'chili') {
+          ctx.font = '50px serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('🌶️', it.x, it.y)
+          tag(ctx, '辣子', it.x, it.y + 34, 'rgba(200, 40, 20, 0.92)', '#fff')
+        } else {
+          drawFood(ctx, it.kind, it.x, it.y, SIZE)
+          const wanted = order.includes(it.kind) && (caught[it.kind] || 0) < NEED_EACH
+          tag(ctx, shortName(it.kind), it.x, it.y + SIZE / 2 + 4,
+            wanted ? 'rgba(255, 214, 77, 0.95)' : 'rgba(40, 24, 14, 0.7)', wanted ? '#5a2d12' : '#f0e2c8')
+        }
       }
       drawSprite(ctx, assets.xiaoyong, xy, H - 40, 84, xy > x)
       drawSprite(ctx, assets.hero, x, H - 40, 130)

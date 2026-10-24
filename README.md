@@ -39,6 +39,7 @@ EverOS 客户端复用自 [echo](https://github.com/xiaobaoliu849/echo) 的 `eve
 - AI：经 [OpenAI Next](https://credits.openai-next.com) 网关调用（国内可直连）——文本与看图 `claude-sonnet-5-5`、生图 `gpt-image-2`；EverOS Cloud 记忆
 - 配音：固定台词（开场、5 个景点、大雁塔）是预先用 Gemini `gemini-3.8-flash-lite-tts`（声音 Gacrux）生成好的 mp3，游戏里直接播放；AI 现写的个性化台词用 Edge 神经语音实时合成（国内可用），再不行用浏览器语音
 - 背景音乐：3 首 Gemini Lyria 3.5 生成的纯器乐国风曲（逛地图 `town`、小游戏 `game`、大雁塔 `finale`），预先生成放在 `assets/music/`，按画面交叉淡入淡出循环播放，小俑说话时自动压低。重新生成：`python -m backend.make_music`，然后把 `media.ts` 里的 `MUSIC_VERSION` 加 1
+- 回民街小吃贴图：5 张预先生成的卡通小吃（`assets/img/food_*.png`，白色贴纸描边）。重新生成：`python -m backend.make_food [roujiamo ...]`（需 `OPENAI_NEXT_API_KEY`，建议 `AI_IMAGE_QUALITY=medium`）
 - 重新生成预录语音：`python -m backend.make_voice`（需 `GEMINI_API_KEY` 和 `pip install lameenc`）。按官方 Interactions API 调用，风格只放在 `speech_metadata.style`，台词文本里不放任何提示词；每条都回听转写校对。改完把 `App.tsx` 里的 `VOICE_VERSION` 加 1
 
 ## 本地运行
