@@ -1,4 +1,4 @@
-# 长安记得你 · Chang'an Remembers You
+﻿# 长安记得你 · Chang'an Remembers You
 
 陪一个健忘的兵马俑「小俑」逛西安。一句话或一张照片生成你的旅行主角，闯 5 个西安景点小游戏，集齐通关文牒上的印章。
 小俑用 [EverOS](https://evermind.ai) 记住你每一次旅行：你爱吃什么、在哪摔过跟头、对它说过什么。下次再来，它会翻旧账、改路线、换菜单。
@@ -21,7 +21,7 @@ WaytoAGI 1024 黑客松 · 游戏赛道作品。
 
 - 每站结束：把这站发生的事写入 EverOS（`/api/v2/memory/add`）。
 - 一局结束：写入玩家对小俑说的话并 `flush`。
-- 开局：`/api/v2/memory/search` 取回旧事，Gemini 生成小俑开场白、推荐路线、回民街菜单、城墙提醒。
+- 开局：`/api/v2/memory/search` 取回旧事，AI 生成小俑开场白、推荐路线、回民街菜单、城墙提醒。
 - EverOS 不可用时，浏览器本地记录兜底，游戏照常运行。
 
 EverOS 客户端复用自 [echo](https://github.com/xiaobaoliu849/echo) 的 `evermem_service.py`（v2 API）。
@@ -29,8 +29,11 @@ EverOS 客户端复用自 [echo](https://github.com/xiaobaoliu849/echo) 的 `eve
 ## 技术栈
 
 - 前端：React 19 + Vite + TypeScript，小游戏用 Canvas 2D
-- 后端：FastAPI，藏 Gemini 和 EverOS 的 key，并托管前端
-- AI：Gemini（文本 `gemini-3.5-flash`、生图 `gemini-3.1-flash-image`、配音 `gemini-3.8-flash-tts`），EverOS Cloud 记忆
+- 后端：FastAPI，藏 AI 网关和 EverOS 的 key，并托管前端
+- AI：经 [OpenAI Next](https://credits.openai-next.com) 网关调用（国内可直连）——文本与看图 `claude-sonnet-5-5`、生图 `gpt-image-2`；EverOS Cloud 记忆
+- 配音：固定台词（开场、5 个景点、大雁塔）是预先用 Gemini `gemini-3.8-flash-lite-tts`（声音 Gacrux）生成好的 mp3，游戏里直接播放；AI 现写的个性化台词用 Edge 神经语音实时合成（国内可用），再不行用浏览器语音
+- 背景音乐：3 首 Gemini Lyria 3.5 生成的纯器乐国风曲（逛地图 `town`、小游戏 `game`、大雁塔 `finale`），预先生成放在 `assets/music/`，按画面交叉淡入淡出循环播放，小俑说话时自动压低。重新生成：`python -m backend.make_music`，然后把 `media.ts` 里的 `MUSIC_VERSION` 加 1
+- 重新生成预录语音：`python -m backend.make_voice`（需 `GEMINI_API_KEY` 和 `pip install lameenc`）。按官方 Interactions API 调用，风格只放在 `speech_metadata.style`，台词文本里不放任何提示词；每条都回听转写校对。改完把 `App.tsx` 里的 `VOICE_VERSION` 加 1
 
 ## 本地运行
 
@@ -41,8 +44,8 @@ EverOS 客户端复用自 [echo](https://github.com/xiaobaoliu849/echo) 的 `eve
 ```bash
 pip install -r requirements.txt
 cd frontend && npm install && npm run build && cd ..
-export GEMINI_API_KEY=...   # Google AI Studio
-export EVEROS_API_KEY=...   # EverOS Console
+export OPENAI_NEXT_API_KEY=...  # OpenAI Next 网关
+export EVEROS_API_KEY=...       # EverOS Console
 uvicorn backend.main:app --port 8000
 # 打开 http://localhost:8000
 ```
@@ -51,9 +54,4 @@ uvicorn backend.main:app --port 8000
 
 ## 部署
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/xiaobaoliu849/changan-trip)
-
-点上面的按钮，用 GitHub 登录 Render，填 `GEMINI_API_KEY` 和 `EVEROS_API_KEY`，几分钟后得到一个公开链接，玩家打开即玩、不用填 key。服务放在新加坡区（Gemini 可用，国内访问也较快）。
-
-
-仓库自带 `Dockerfile`，Railway / Render / Fly.io 都可以直接用：新建服务 → 连接本仓库 → 设置环境变量 `GEMINI_API_KEY`、`EVEROS_API_KEY` → 部署。
+仓库自带 `Dockerfile`，Railway / Render / Fly.io 都可以直接用：新建服务 → 连接本仓库 → 设置环境变量 `OPENAI_NEXT_API_KEY`、`EVEROS_API_KEY` → 部署。

@@ -18,7 +18,7 @@ if errorlevel 1 (
 
 if not exist ".env" (
   copy ".env.example" ".env" >nul
-  echo [!] Created .env - fill in GEMINI_API_KEY and EVEROS_API_KEY, save, then run this file again.
+  echo [!] Created .env - fill in OPENAI_NEXT_API_KEY and EVEROS_API_KEY, save, then run this file again.
   notepad ".env"
   goto :fail
 )
