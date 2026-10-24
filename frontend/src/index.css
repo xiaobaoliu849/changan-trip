@@ -1224,11 +1224,32 @@ textarea {
   gap: 8px;
 }
 
-.play-hint {
-  color: var(--paper);
-  font-size: 13px;
+/* Stop name and a few words of how to play, in the gap between the 首页 and sound buttons. */
+.play-bar {
+  margin: 6px 64px 0 96px;
+  min-height: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  opacity: 0.85;
+  color: var(--paper);
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.play-bar b {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.play-bar span {
+  font-size: 12px;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .game-canvas {
@@ -1620,16 +1641,6 @@ textarea {
   color: #8a5a2b;
   margin-top: 6px;
   letter-spacing: 0.5px;
-}
-
-.play-hint {
-  padding: 0 44px;
-  min-height: 42px;
-  margin-left: 64px;
-  padding-left: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* home: the traveler's view of the pit, 小俑 still a statue */

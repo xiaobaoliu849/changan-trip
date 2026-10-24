@@ -747,7 +747,11 @@ export default function App() {
 
       {screen === 'play' && stop && assets && (
         <div className="screen play">
-          <div className="play-hint">{STOPS[stop].hint}</div>
+          {/* Sits between the 首页 and sound buttons; the full rules were on the intro. */}
+          <div className="play-bar">
+            <b>{STOPS[stop].name}</b>
+            <span>{STOPS[stop].tip}</span>
+          </div>
           <GameCanvas factory={GAMES[stop]} assets={assets} options={options} onDone={onDone} />
         </div>
       )}
