@@ -717,3 +717,248 @@ textarea {
   width: 100%;
   border-radius: 10px;
 }
+
+/* event & venue badges */
+.event-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-right: 36px;
+}
+
+.event-badge {
+  background: var(--night);
+  color: #ffe9b0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+
+.venue-badge {
+  background: linear-gradient(135deg, #fff5e0 0%, #f7dfb3 100%);
+  border: 1px solid rgba(184, 50, 42, 0.3);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* 3-step onboarding strip */
+.onboard-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  background: #fffaf0;
+  border: 1.5px solid var(--paper-2);
+  border-radius: 14px;
+  padding: 8px 10px;
+}
+
+.ob-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ob-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ob-step.ob-final .ob-num {
+  background: rgba(184, 50, 42, 0.12);
+}
+
+.ob-step b {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.ob-step.ob-final b {
+  color: var(--red);
+}
+
+.ob-step small {
+  display: block;
+  font-size: 10.5px;
+  opacity: 0.72;
+  white-space: nowrap;
+}
+
+.ob-arrow {
+  color: #b89f7d;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+/* quick start button & divider */
+.btn.fast-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #c93b31 0%, var(--red) 100%);
+  padding: 13px 16px;
+  font-size: 15.5px;
+}
+
+.fast-badge {
+  background: #ffe082;
+  color: #5c1912;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #8c7355;
+  font-size: 12px;
+  margin: 2px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed #dfcfa8;
+}
+
+.divider span {
+  padding: 0 8px;
+}
+
+/* final destination pill on map route */
+.route li.route-final {
+  background: linear-gradient(135deg, #fff3d1 0%, #f7d996 100%);
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  font-weight: bold;
+}
+
+.route li.route-final span {
+  background: #fff;
+  font-size: 13px;
+}
+
+.final-venue {
+  align-self: center;
+  background: rgba(255, 250, 240, 0.92);
+  border: 1px solid rgba(184, 50, 42, 0.3);
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-top: -6px;
+}
+
+/* credits & sponsor logos */
+.credits {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed #d9c9a8;
+  text-align: center;
+  font-size: 12px;
+  color: #7a6045;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cr-host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: bold;
+  color: var(--ink);
+}
+
+.cr-badge-1024 {
+  background: var(--night);
+  color: #ffe066;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.5px;
+}
+
+.cr-venue {
+  color: var(--red);
+  font-size: 12px;
+}
+
+.cr-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.sponsor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fffaf0;
+  border: 1px solid #e6d6b2;
+  border-radius: 999px;
+  padding: 3px 9px 3px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(59, 36, 18, 0.05);
+}
+
+.sponsor-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mark {
+  height: 16px;
+  max-width: 72px;
+  object-fit: contain;
+}
+
+.cr-label,
+.cr-tech {
+  opacity: 0.78;
+  font-size: 11.5px;
+}
+
+.pp-event {
+  text-align: center;
+  font-size: 11px;
+  color: #8a5a2b;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+.play-hint {
+  padding: 0 44px;
+}

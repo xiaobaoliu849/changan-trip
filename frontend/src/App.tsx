@@ -9,6 +9,7 @@ import {
 } from './media'
 import Xiaoyong, { Notebook } from './components/Xiaoyong'
 import Passport from './components/Passport'
+import Credits from './components/Credits'
 import GameCanvas from './games/GameCanvas'
 import type { Assets, GameFactory } from './games/engine'
 import { catchFood } from './games/catchFood'
@@ -297,6 +298,10 @@ export default function App() {
 
       {screen === 'home' && (
         <div className="screen home">
+          <div className="event-header">
+            <span className="event-badge">WaytoAGI 1024 切磋大会 · 游戏赛道</span>
+            <span className="venue-badge">📍 西安曲江京东MALL</span>
+          </div>
           <h1>
             长安记得你
             <small>陪一个健忘的兵马俑逛西安</small>
@@ -308,7 +313,39 @@ export default function App() {
             onStop={handleStopVoice}
             text={homeLine}
           />
+          <div className="onboard-steps" aria-label="游玩指南">
+            <div className="ob-step">
+              <span className="ob-num">1</span>
+              <div>
+                <b>选定主角</b>
+                <small>默认秒开 / AI捏人</small>
+              </div>
+            </div>
+            <span className="ob-arrow">→</span>
+            <div className="ob-step">
+              <span className="ob-num">2</span>
+              <div>
+                <b>连闯 4 站</b>
+                <small>小游戏集长安印章</small>
+              </div>
+            </div>
+            <span className="ob-arrow">→</span>
+            <div className="ob-step ob-final">
+              <span className="ob-num">🏁</span>
+              <div>
+                <b>终点大雁塔</b>
+                <small>领通关文牒·京东MALL</small>
+              </div>
+            </div>
+          </div>
           <div className="card">
+            <button className="btn fast-start" onClick={() => create(true)}>
+              <span className="fast-badge">⚡ 秒开免等待</span>
+              <span>用默认主角「小黄」直接出发 →</span>
+            </button>
+            <div className="divider">
+              <span>或者用 AI 定制你的专属泥人（约 25 秒）</span>
+            </div>
             <label>一句话描述你的旅行主角</label>
             <textarea
               value={text}
@@ -331,16 +368,14 @@ export default function App() {
                 }}
               />
               <button className="btn" disabled={!text.trim() && !photo} onClick={() => create()}>
-                出发 →
+                ✨ 生成并出发 →
               </button>
             </div>
             {photo && <img className="thumb" src={photo.url} alt="照片" />}
-            <button className="link" onClick={() => create(true)}>
-              懒得想？用默认主角直接玩
-            </button>
             {error && <p className="error">{error}</p>}
           </div>
-          <p className="tip">游戏有语音，建议开声音 · 手机和电脑都能玩</p>
+          <p className="tip">🔊 建议开启声音 · 点击对话气泡可重听语音 · 手机电脑皆可玩</p>
+          <Credits />
         </div>
       )}
 
@@ -383,6 +418,10 @@ export default function App() {
                   {STOPS[s].name}
                 </li>
               ))}
+              <li className="route-final">
+                <span>🏁</span>
+                终点：大雁塔（曲江京东MALL旁）
+              </li>
             </ol>
           </div>
           <button className="btn big" onClick={goStop}>
@@ -455,6 +494,7 @@ export default function App() {
         <div className="screen final" style={{ backgroundImage: 'url(/assets/img/bg_dayanta.jpg)' }}>
           <div className="final-inner">
             <h2>终点 · 大雁塔</h2>
+            <div className="final-venue">📍 大雁塔旁 · 西安曲江京东MALL（WaytoAGI 1024 主会场）</div>
             {!ending ? (
               <>
                 <Xiaoyong
@@ -515,6 +555,7 @@ export default function App() {
                     换个主角
                   </button>
                 </div>
+                <Credits />
               </>
             )}
           </div>

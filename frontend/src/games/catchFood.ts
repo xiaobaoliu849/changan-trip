@@ -2,7 +2,7 @@ import { FOODS, type FoodId } from '../api'
 import { H, W, drawCover, drawSprite, floatText, hearts, hud, rand, roundRect, type GameFactory } from './engine'
 
 interface Item {
-  kind: FoodId | 'chili'
+  kind: FoodId | 'chili' | 'bonus'
   x: number
   y: number
   vy: number
@@ -32,10 +32,10 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
   const end = (passed: boolean) => {
     over = true
     const got = Object.entries(caught)
-      .filter(([k]) => k !== 'chili')
+      .filter(([k]) => k !== 'chili' && k !== 'bonus')
       .map(([k, n]) => `${FOODS[k as FoodId].name}×${n}`)
       .join('、')
-    const extra = Object.keys(caught).filter((k) => k !== 'chili' && !order.includes(k as FoodId))
+    const extra = Object.keys(caught).filter((k) => k !== 'chili' && k !== 'bonus' && !order.includes(k as FoodId))
     const detail =
       `客人点了${order.map((f) => FOODS[f].name).join('、')}；接到${got || '什么都没接到'}` +
       (extra.length ? `（还顺手接了不在单子上的${extra.map((k) => FOODS[k as FoodId].name).join('、')}）` : '') +
@@ -59,7 +59,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
         const r = Math.random()
         const all = Object.keys(FOODS) as FoodId[]
         const kind: Item['kind'] =
-          r < chiliRate ? 'chili' : r < 0.75 ? order[Math.floor(Math.random() * order.length)] : all[Math.floor(Math.random() * all.length)]
+          r < 0.04 ? 'bonus' : r < chiliRate ? 'chili' : r < 0.75 ? order[Math.floor(Math.random() * order.length)] : all[Math.floor(Math.random() * all.length)]
         items.push({ kind, x: rand(40, W - 40), y: 80, vy: rand(170, 260) + (TIME - time) * 4 })
       }
       for (const it of items) it.y += it.vy * dt
@@ -68,7 +68,11 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
         if (it.y > H - 150 && it.y < H - 60 && Math.abs(it.x - x) < 44) {
           items.splice(i, 1)
           caught[it.kind] = (caught[it.kind] || 0) + 1
-          if (it.kind === 'chili') {
+          if (it.kind === 'bonus') {
+            // 1024 程序员节彩蛋：解一次辣
+            chili = Math.max(0, chili - 1)
+            pops.push({ text: '1024 快乐！解辣', x: it.x, y: it.y - 40, t: 1, color: '#7fe0ff' })
+          } else if (it.kind === 'chili') {
             chili++
             flash = 0.4
             pops.push({ text: '好辣！', x: it.x, y: it.y - 40, t: 0.8, color: '#ff5a36' })
@@ -110,7 +114,17 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       for (const it of items) {
         ctx.font = '44px serif'
         ctx.textAlign = 'center'
-        ctx.fillText(it.kind === 'chili' ? '🌶️' : FOODS[it.kind].emoji, it.x, it.y)
+        if (it.kind === 'bonus') {
+          ctx.save()
+          ctx.fillStyle = '#ffd34d'
+          ctx.beginPath()
+          ctx.arc(it.x, it.y - 14, 26, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#7a3e00'
+          ctx.font = 'bold 16px sans-serif'
+          ctx.fillText('1024', it.x, it.y - 9)
+          ctx.restore()
+        } else ctx.fillText(it.kind === 'chili' ? '🌶️' : FOODS[it.kind].emoji, it.x, it.y)
       }
       drawSprite(ctx, assets.hero, x, H - 40, 130)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color, 22)
