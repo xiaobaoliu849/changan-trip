@@ -159,7 +159,7 @@ export default function Credits() {
           <PartnerBadge key={p.id} {...p} />
         ))}
       </div>
-      <div className="cr-tech">长期记忆引擎 Powered by EverMind (EverOS) · 生图与智能 by OpenAI Next &amp; Gemini</div>
+      <div className="cr-tech">长期记忆 by EverMind (EverOS) · AI 生图与智能 by OpenAI Next</div>
     </footer>
   )
 }
