@@ -1,4 +1,4 @@
-import { H, W, drawSprite, floatText, hearts, hud, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 interface Obstacle {
   x: number
@@ -175,41 +175,43 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
       if (invuln > 0.5) floatText(ctx, '哎哟！', PX + 56, py - 118, '#ff8a65', 18)
       const km = Math.min(TOTAL_KM, (t / TIME) * TOTAL_KM)
       hud(ctx, `🚲 ${km.toFixed(1)} / ${TOTAL_KM} km  第${segment()}段`, hearts(3 - hits.length))
-      // A road map of the lap along the bottom: three segments, a bike marker and the finish flag.
-      const ry = H - 52
-      const rx0 = 40
-      const rx1 = W - 56
-      ctx.save()
-      ctx.fillStyle = 'rgba(30, 18, 10, 0.45)'
-      roundRect(ctx, 16, ry - 34, W - 32, 72, 14)
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(255, 246, 224, 0.35)'
-      ctx.lineWidth = 6
-      ctx.lineCap = 'round'
-      ctx.beginPath()
-      ctx.moveTo(rx0, ry)
-      ctx.lineTo(rx1, ry)
-      ctx.stroke()
-      ctx.strokeStyle = '#ffcf5c'
-      ctx.beginPath()
-      ctx.moveTo(rx0, ry)
-      ctx.lineTo(rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry)
-      ctx.stroke()
-      ctx.font = `bold 13px ${FONT}`
-      ctx.textAlign = 'center'
-      for (let k = 0; k < 3; k++) {
-        const sx = rx0 + ((rx1 - rx0) * (k + 0.5)) / 3
-        ctx.fillStyle = segment() === k + 1 ? '#ffcf5c' : 'rgba(255, 246, 224, 0.7)'
-        ctx.fillText(`第${k + 1}段`, sx, ry + 26)
-        if (k) {
-          ctx.fillStyle = 'rgba(255, 246, 224, 0.6)'
-          ctx.fillRect(rx0 + ((rx1 - rx0) * k) / 3 - 1, ry - 7, 2, 14)
+      if (!photoMode) {
+        // A road map of the lap along the bottom: three segments, a bike marker and the finish flag.
+        const ry = H - 52
+        const rx0 = 40
+        const rx1 = W - 56
+        ctx.save()
+        ctx.fillStyle = 'rgba(30, 18, 10, 0.45)'
+        roundRect(ctx, 16, ry - 34, W - 32, 72, 14)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(255, 246, 224, 0.35)'
+        ctx.lineWidth = 6
+        ctx.lineCap = 'round'
+        ctx.beginPath()
+        ctx.moveTo(rx0, ry)
+        ctx.lineTo(rx1, ry)
+        ctx.stroke()
+        ctx.strokeStyle = '#ffcf5c'
+        ctx.beginPath()
+        ctx.moveTo(rx0, ry)
+        ctx.lineTo(rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry)
+        ctx.stroke()
+        ctx.font = `bold 13px ${FONT}`
+        ctx.textAlign = 'center'
+        for (let k = 0; k < 3; k++) {
+          const sx = rx0 + ((rx1 - rx0) * (k + 0.5)) / 3
+          ctx.fillStyle = segment() === k + 1 ? '#ffcf5c' : 'rgba(255, 246, 224, 0.7)'
+          ctx.fillText(`第${k + 1}段`, sx, ry + 26)
+          if (k) {
+            ctx.fillStyle = 'rgba(255, 246, 224, 0.6)'
+            ctx.fillRect(rx0 + ((rx1 - rx0) * k) / 3 - 1, ry - 7, 2, 14)
+          }
         }
+        ctx.font = '26px serif'
+        ctx.fillText('🏁', rx1 + 16, ry + 9)
+        ctx.fillText('🚲', rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry - 8)
+        ctx.restore()
       }
-      ctx.font = '26px serif'
-      ctx.fillText('🏁', rx1 + 16, ry + 9)
-      ctx.fillText('🚲', rx0 + (rx1 - rx0) * Math.min(1, t / TIME), ry - 8)
-      ctx.restore()
       if (warn && t < 4) floatText(ctx, `小俑：${warn}`, W / 2, 130, '#ffe9b0', 20)
       else if (t < 3.5) floatText(ctx, '点击屏幕 / 空格 跳，空中还能再跳一下', W / 2, 130, '#ffe9b0', 19)
     },

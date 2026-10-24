@@ -1,4 +1,4 @@
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 const TIME = 30
 const LIMIT = 1.0
@@ -36,6 +36,7 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
   }
 
   const button = (ctx: CanvasRenderingContext2D, x: number, label: string, on: boolean) => {
+    if (photoMode) return
     ctx.save()
     ctx.fillStyle = on ? 'rgba(255, 207, 92, 0.9)' : 'rgba(30, 18, 10, 0.45)'
     roundRect(ctx, x, H - 96, 96, 72, 18)
@@ -113,15 +114,17 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
         ctx.font = '44px serif'
       }
       ctx.restore()
-      // Tilt meter: the marker must stay out of the red ends.
-      const mw = W - 120
-      ctx.fillStyle = 'rgba(30, 18, 10, 0.45)'
-      ctx.fillRect(60, 80, mw, 12)
-      ctx.fillStyle = 'rgba(255, 90, 54, 0.8)'
-      ctx.fillRect(60, 80, mw * 0.15, 12)
-      ctx.fillRect(60 + mw * 0.85, 80, mw * 0.15, 12)
-      ctx.fillStyle = Math.abs(angle) > LIMIT * 0.7 ? '#ff5a36' : '#ffcf5c'
-      ctx.fillRect(W / 2 + (angle / LIMIT) * (mw / 2) - 6, 74, 12, 24)
+      if (!photoMode) {
+        // Tilt meter: the marker must stay out of the red ends.
+        const mw = W - 120
+        ctx.fillStyle = 'rgba(30, 18, 10, 0.45)'
+        ctx.fillRect(60, 80, mw, 12)
+        ctx.fillStyle = 'rgba(255, 90, 54, 0.8)'
+        ctx.fillRect(60, 80, mw * 0.15, 12)
+        ctx.fillRect(60 + mw * 0.85, 80, mw * 0.15, 12)
+        ctx.fillStyle = Math.abs(angle) > LIMIT * 0.7 ? '#ff5a36' : '#ffcf5c'
+        ctx.fillRect(W / 2 + (angle / LIMIT) * (mw / 2) - 6, 74, 12, 24)
+      }
       // Which way to press, right where the player is looking.
       if (fallen <= 0 && Math.abs(angle) > SHOW_ARROW) {
         const urgent = Math.abs(angle) > LIMIT * 0.6

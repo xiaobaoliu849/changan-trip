@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { StopResult } from '../api'
-import { H, W, type Assets, type GameFactory } from './engine'
+import { H, W, setPhotoMode, type Assets, type GameFactory } from './engine'
 
 interface Props {
   factory: GameFactory
@@ -29,12 +29,22 @@ export default function GameCanvas({ factory, assets, options, onDone }: Props) 
       finish: (r) => {
         if (finished) return
         finished = true
-        // Keep a frame of the hero in action for the passport card.
+        // Keep a frame of the hero in action for the passport card, without the HUD and controls.
+        // The next animation frame redraws them, so the player never sees the clean frame.
         let snapshot: string | undefined
+        setPhotoMode(true)
         try {
-          snapshot = canvas.toDataURL('image/jpeg', 0.7)
+          game.draw(ctx)
+          // At game size, not the dpr-scaled backing store: the passport shows it ~170 px wide.
+          const shot = document.createElement('canvas')
+          shot.width = W
+          shot.height = H
+          shot.getContext('2d')!.drawImage(canvas, 0, 0, W, H)
+          snapshot = shot.toDataURL('image/jpeg', 0.85)
         } catch {
           snapshot = undefined
+        } finally {
+          setPhotoMode(false)
         }
         setTimeout(() => doneRef.current({ ...r, snapshot }), 900)
       },

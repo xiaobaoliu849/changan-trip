@@ -1,5 +1,5 @@
 import { FOODS, type FoodId } from '../api'
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 interface Item {
   kind: FoodId | 'chili' | 'bonus'
@@ -142,25 +142,27 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       drawCover(ctx, assets.bg)
       ctx.fillStyle = 'rgba(0,0,0,0.15)'
       ctx.fillRect(0, 0, W, H)
-      // Order card
-      ctx.fillStyle = 'rgba(255, 246, 224, 0.93)'
-      roundRect(ctx, 12, 66, W - 24, 52, 12)
-      ctx.fill()
-      ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.textBaseline = 'middle'
-      ctx.fillStyle = '#5a2d12'
-      ctx.textAlign = 'left'
-      ctx.fillText('小俑点', 22, 92)
-      order.forEach((f, i) => {
-        const done = Math.min(NEED_EACH, caught[f] || 0)
-        const left = 84 + i * ((W - 96) / 3)
-        drawFood(ctx, f, left + 15, 92, 32)
-        ctx.font = 'bold 15px "PingFang SC", "Microsoft YaHei", sans-serif'
-        ctx.textAlign = 'left'
+      if (!photoMode) {
+        // Order card
+        ctx.fillStyle = 'rgba(255, 246, 224, 0.93)'
+        roundRect(ctx, 12, 66, W - 24, 52, 12)
+        ctx.fill()
+        ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif'
         ctx.textBaseline = 'middle'
-        ctx.fillStyle = done >= NEED_EACH ? '#2f7a64' : '#5a2d12'
-        ctx.fillText(`${shortName(f)} ${done}/${NEED_EACH}`, left + 34, 92)
-      })
+        ctx.fillStyle = '#5a2d12'
+        ctx.textAlign = 'left'
+        ctx.fillText('小俑点', 22, 92)
+        order.forEach((f, i) => {
+          const done = Math.min(NEED_EACH, caught[f] || 0)
+          const left = 84 + i * ((W - 96) / 3)
+          drawFood(ctx, f, left + 15, 92, 32)
+          ctx.font = 'bold 15px "PingFang SC", "Microsoft YaHei", sans-serif'
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'middle'
+          ctx.fillStyle = done >= NEED_EACH ? '#2f7a64' : '#5a2d12'
+          ctx.fillText(`${shortName(f)} ${done}/${NEED_EACH}`, left + 34, 92)
+        })
+      }
       for (const it of items) {
         if (it.kind === 'bonus') {
           ctx.save()
@@ -188,7 +190,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       drawSprite(ctx, assets.xiaoyong, xy, H - 40, 84, xy > x)
       drawSprite(ctx, assets.hero, x, H - 40, 130)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color, 22)
-      if (flash > 0) {
+      if (flash > 0 && !photoMode) {
         ctx.fillStyle = `rgba(255, 60, 30, ${flash * 0.6})`
         ctx.fillRect(0, 0, W, H)
       }

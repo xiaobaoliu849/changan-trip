@@ -8,7 +8,7 @@ import {
   type Track,
 } from './media'
 import Xiaoyong, { Notebook } from './components/Xiaoyong'
-import Passport from './components/Passport'
+import Passport, { type Shot } from './components/Passport'
 import Credits from './components/Credits'
 import Prologue, { type Met } from './components/Prologue'
 import GameCanvas from './games/GameCanvas'
@@ -159,7 +159,8 @@ export default function App() {
   const [lastStamps, setLastStamps] = useState<StopId[] | null>(null)
   const [log, setLog] = useState<string[]>([])
   const [result, setResult] = useState<StopResult | null>(null)
-  const [snapshot, setSnapshot] = useState<string>()
+  // A clean frame from each stop's game; the traveler picks one for the passport.
+  const [shots, setShots] = useState<Shot[]>([])
   const [assets, setAssets] = useState<Assets | null>(null)
   const [speaking, setSpeaking] = useState(false)
   const [muted, setMute] = useState(false)
@@ -267,7 +268,7 @@ export default function App() {
     setEnding(null)
     setPostcard('')
     setSaid('')
-    setSnapshot(undefined)
+    setShots([])
     const [cut, b] = await Promise.all([
       cutOutWhite(rawSprite),
       api.brief(h, no).catch((): Brief => ({
@@ -375,7 +376,7 @@ export default function App() {
   const onDone = (r: StopResult) => {
     if (!stop || !hero) return
     setResult(r)
-    if (r.snapshot && (r.passed || !snapshot)) setSnapshot(r.snapshot)
+    if (r.snapshot) setShots((list) => [...list, { stop, src: r.snapshot!, passed: r.passed }])
     // Game summaries call the player 你 (shown as is on the result screen); memory is told in the
     // third person, so the traveler is named there. Only catchFood uses 你 today.
     const told = r.detail.split('你').join(hero.name)
@@ -998,8 +999,9 @@ export default function App() {
                 <Passport
                   hero={hero}
                   sprite={sprite}
-                  inGame={snapshot}
+                  shots={shots}
                   stamps={stamps}
+                  route={route}
                   comment={ending.comment}
                   runNo={runNo}
                   photo={photo?.url}

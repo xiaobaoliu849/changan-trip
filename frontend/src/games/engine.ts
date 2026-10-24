@@ -26,6 +26,12 @@ export interface Game {
 
 export type GameFactory = (env: GameEnv) => Game
 
+// Set only while GameCanvas draws the passport photo: games leave out HUDs, hints and controls.
+export let photoMode = false
+export const setPhotoMode = (on: boolean) => {
+  photoMode = on
+}
+
 /** Draw ``img`` to cover the whole canvas, like CSS background-size: cover. */
 export function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, offsetX = 0) {
   const s = Math.max(W / img.width, H / img.height)
@@ -46,6 +52,7 @@ export function drawSprite(ctx: CanvasRenderingContext2D, img: HTMLImageElement,
 }
 
 export function hud(ctx: CanvasRenderingContext2D, left: string, right: string) {
+  if (photoMode) return
   ctx.save()
   ctx.fillStyle = 'rgba(30, 18, 10, 0.55)'
   roundRect(ctx, 12, 12, W - 24, 44, 14)
@@ -75,6 +82,7 @@ export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w
 }
 
 export function floatText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color = '#fff', size = 26) {
+  if (photoMode) return
   ctx.save()
   ctx.font = `bold ${size}px "PingFang SC", "Microsoft YaHei", sans-serif`
   ctx.textAlign = 'center'
