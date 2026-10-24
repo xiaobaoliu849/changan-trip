@@ -34,6 +34,10 @@ EverOS 客户端复用自 [echo](https://github.com/xiaobaoliu849/echo) 的 `eve
 
 ## 本地运行
 
+**一键启动**：Windows 双击 `run_local.bat`（Mac/Linux 运行 `./run_local.sh`）。第一次会生成 `.env`，填好两个 key 再运行一次，浏览器会自动打开 http://localhost:8000。需要先装 Python 3.10+ 和 Node.js 20+。
+
+手动启动：
+
 ```bash
 pip install -r requirements.txt
 cd frontend && npm install && npm run build && cd ..

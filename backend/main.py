@@ -19,6 +19,18 @@ from pydantic import BaseModel, Field
 from .services import gemini
 from .services.evermem_service import EverMemService
 
+def _load_dotenv() -> None:
+    """Read KEY=VALUE lines from the repo's .env so local runs need no exported variables."""
+    env = Path(__file__).resolve().parent.parent / ".env"
+    if not env.exists():
+        return
+    for line in env.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and key and not key.startswith("#") and value.strip():
+            os.environ.setdefault(key.strip(), value.strip().strip('"'))
+
+
+_load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("changan")
 
