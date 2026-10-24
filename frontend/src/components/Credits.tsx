@@ -20,17 +20,20 @@ export default function Credits() {
       </div>
       <div className="cr-label">全国合作伙伴（排名不分先后）</div>
       <div className="cr-row">
-        <span className="sponsor-card evermind-card" title="EverMind · EverOS">
-          <img className="evermind-mark" src="/assets/brand/evermind-gold.svg" alt="EverMind" />
-          <strong>EverMind</strong>
-        </span>
         {SPONSORS.map((s) => (
           <span key={s.id} className="sponsor-card" title={s.name}>
             <img className="mark" src={s.src} alt={s.name} />
           </span>
         ))}
       </div>
-      <div className="cr-tech">长期记忆 by EverMind (EverOS) · AI 生图与智能 by OpenAI Next</div>
+      <div className="cr-powered">
+        <span className="evermind-pill" title="EverMind · EverOS">
+          <img className="evermind-mark" src="/assets/brand/evermind-gold.svg" alt="EverMind" />
+          <span>长期记忆引擎 <b>EverMind</b> (EverOS)</span>
+        </span>
+        <span className="cr-dot">·</span>
+        <span className="cr-tech">AI 生图与智能 by OpenAI Next</span>
+      </div>
     </footer>
   )
 }

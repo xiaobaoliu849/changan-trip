@@ -827,14 +827,9 @@ textarea {
   padding: 3px 8px;
 }
 
-.evermind-card {
-  font-size: 12px;
-  color: #1f160f;
-}
-
 .evermind-mark {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   border-radius: 4px;
   object-fit: contain;
 }
@@ -845,9 +840,38 @@ textarea {
   object-fit: contain;
 }
 
+.cr-powered {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.evermind-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fffaf0;
+  border: 1px solid #e6cfa0;
+  border-radius: 999px;
+  padding: 2px 9px 2px 4px;
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.evermind-pill b {
+  color: #1f160f;
+}
+
+.cr-dot {
+  opacity: 0.45;
+}
+
 .cr-label,
 .cr-tech {
-  opacity: 0.72;
+  opacity: 0.75;
   font-size: 11px;
 }
 
