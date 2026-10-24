@@ -1,27 +1,46 @@
 @echo off
-chcp 65001 >nul
-cd /d %~dp0
-if not exist .env (
-  copy .env.example .env >nul
-  echo 已创建 .env，请用记事本打开，填入 GEMINI_API_KEY 和 EVEROS_API_KEY 后再运行本脚本。
-  notepad .env
-  pause
-  exit /b
-)
+setlocal
+cd /d "%~dp0"
+
 set PY=python
-python --version >nul 2>&1 || set PY=py
-%PY% --version >nul 2>&1 || (echo 没找到 Python，请先安装 Python 3.10+ 并重新打开窗口。& pause & exit /b)
-echo [1/3] 安装 Python 依赖...
-%PY% -m pip install -q -r requirements.txt || goto :err
-echo [2/3] 构建网页...
-cd frontend
-call npm install --silent || goto :err
-call npm run build || goto :err
-cd ..
-echo [3/3] 启动游戏：http://localhost:8000
+python --version >nul 2>&1
+if errorlevel 1 set PY=py
+%PY% --version >nul 2>&1
+if errorlevel 1 (
+  echo [X] Python not found. Install Python 3.10+ and open a new window.
+  goto :fail
+)
+node --version >nul 2>&1
+if errorlevel 1 (
+  echo [X] Node.js not found. Install Node.js 20+ and open a new window.
+  goto :fail
+)
+
+if not exist ".env" (
+  copy ".env.example" ".env" >nul
+  echo [!] Created .env - fill in GEMINI_API_KEY and EVEROS_API_KEY, save, then run this file again.
+  notepad ".env"
+  goto :fail
+)
+
+echo [1/3] Installing Python packages...
+%PY% -m pip install -q -r requirements.txt
+if errorlevel 1 goto :error
+
+echo [2/3] Building the web page...
+pushd frontend
+call npm install --no-audit --no-fund
+if errorlevel 1 (popd & goto :error)
+call npm run build
+if errorlevel 1 (popd & goto :error)
+popd
+
+echo [3/3] Starting the game at http://localhost:8000  (close this window to stop)
 start "" http://localhost:8000
 %PY% -m uvicorn backend.main:app --port 8000
-exit /b
-:err
-echo 出错了，请把上面的报错发给 Claude。
+goto :fail
+
+:error
+echo [X] Something went wrong. Screenshot this window and send it to Claude.
+:fail
 pause
