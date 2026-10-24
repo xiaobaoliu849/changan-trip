@@ -16,7 +16,7 @@ export default function Credits() {
         <span>WaytoAGI 全国 1024 切磋大会 · 游戏赛道作品</span>
       </div>
       <div className="cr-venue">
-        📍 西安主会场：<b>西安曲江京东MALL</b>（雁塔区曲江路618号 · 大雁塔商圈）
+        📍 西安主会场：<b>西安曲江京东MALL</b>（雁塔区曲江大道与南三环交界 · 曲江汉华城）
       </div>
       <div className="cr-label">全国合作伙伴（排名不分先后）</div>
       <div className="cr-row">

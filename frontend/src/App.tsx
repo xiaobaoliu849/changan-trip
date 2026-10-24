@@ -824,7 +824,7 @@ export default function App() {
                 ? lastStamps.length >= route.length
                   ? `上次 ${route.length} 个章全集齐了，这次冲个全程不掉血！`
                   : `上次集了 ${lastStamps.length}/${route.length} 个章，这次把「补章」的拿下！`
-                : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）`}
+                : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔`}
             </p>
           </div>
           <div className="cta">
@@ -944,7 +944,7 @@ export default function App() {
                 <h2>大雁塔</h2>
               </div>
             </div>
-            <div className="final-venue">📍 大雁塔旁 · 曲江京东MALL · 1024 主会场</div>
+            <div className="final-venue">📍 1024 主会场 · 曲江京东MALL（曲江汉华城）</div>
             {!ending ? (
               <>
                 <div className="trip-sum">
