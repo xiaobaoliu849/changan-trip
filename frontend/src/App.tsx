@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  STOPS, api, nextRunNo, pushLocalLog, resetPlayer,
-  type Brief, type Hero, type StopId, type StopResult,
+  STOPS, api, nextRunNo, pushLocalLog, resetPlayer, runCount, saveTraveler, savedTraveler,
+  type Brief, type Hero, type StopId, type StopResult, type Traveler,
 } from './api'
 import {
   cutOutWhite, fileToBase64, loadImage, playMusic, playVoice, setMuted, speakBrowser, stopVoice, voiceTicket,
@@ -117,7 +117,7 @@ const MAP_H = 768
 type Place = StopId | 'dayanta'
 const PLACES: Record<Place, { x: number; y: number; icon: string }> = {
   zhonglou: { x: 680, y: 262, icon: '🔔' },
-  huiminjie: { x: 500, y: 215, icon: '🥙' },
+  huiminjie: { x: 500, y: 215, icon: '🍜' },
   bingmayong: { x: 1232, y: 385, icon: '⚔️' },
   chengqiang: { x: 1070, y: 258, icon: '🚲' },
   datang: { x: 170, y: 515, icon: '🏮' },
@@ -134,6 +134,8 @@ const RECALL_LINES = ['咦，脚步声……是你回来接我了？', '我翻�
 const LIVES = 3
 // One-tap things to tell 小俑 at the finish, so nobody has to type on a phone.
 const QUICK_SAYS = ['下回再带你出来玩！', '下次带你去吃泡馍', '回坑里可别乱动哦', '你可别把我忘了']
+// Tap-to-fill traveler descriptions on 首页, so nobody has to think up one on a phone keyboard.
+const EXAMPLES = ['背着单反、怕辣的上海女孩', '戴墨镜的橘猫', '第一次来西安的程序员', '爱吃碳水的东北大哥']
 
 type Screen = 'home' | 'prologue' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
 const SCREEN_MUSIC: Record<Screen, Track> = {
@@ -170,6 +172,12 @@ export default function App() {
   // The run's hero and brief are loaded; the trip starts once the prologue (if any) is over too.
   const [ready, setReady] = useState(false)
   const [met, setMet] = useState<Met | null>(null)
+  // A traveler from an earlier visit (kept in localStorage), and whether this player said they are someone new.
+  const [saved, setSaved] = useState<Traveler | null>(savedTraveler)
+  const [newcomer, setNewcomer] = useState(false)
+  // 出发 tapped with nothing to draw from: point at the box instead of a dead disabled button.
+  const [nudge, setNudge] = useState(false)
+  const textRef = useRef<HTMLTextAreaElement>(null)
   const [answer, setAnswer] = useState<number | null>(null)
   const [replyDone, setReplyDone] = useState(false)
   const answerTimer = useRef(0)
@@ -180,12 +188,23 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const route = brief?.route ?? []
+  // 首页 greets a remembered traveler back, unless they said they are someone new.
+  const welcomeBack = saved && !newcomer ? saved : null
   const stop = route[step]
 
   useEffect(() => {
-    if (screen === 'home') resetPlayer()
     playMusic(SCREEN_MUSIC[screen])
+    if (screen === 'home') {
+      setSaved(savedTraveler())
+      setNewcomer(false)
+      setNudge(false)
+    }
   }, [screen])
+
+  // Remember the traveler and this trip's stamps, so 首页 can greet them back next time.
+  useEffect(() => {
+    if (hero && sprite && runId) saveTraveler({ hero, sprite, stamps })
+  }, [hero, sprite, runId, stamps])
 
   // Ctrl+V a copied image anywhere on the home screen to use it as the photo.
   useEffect(() => {
@@ -279,8 +298,17 @@ export default function App() {
   }, [ready, screen])
 
   const create = async (useDefault = false) => {
+    if (!useDefault && !text.trim() && !photo) {
+      setNudge(true)
+      textRef.current?.focus()
+      return
+    }
     setError('')
+    // A new traveler: 小俑 has never met them, so drop the old player's memory.
     resetPlayer()
+    setSaved(null)
+    setHero(null)
+    setSprite('')
     setLastStamps(null)
     setReady(false)
     setMet(null)
@@ -295,6 +323,25 @@ export default function App() {
       await startRun(r.hero, r.sprite)
     } catch (e) {
       setError(`生成失败了：${e instanceof Error ? e.message.slice(0, 120) : e}`)
+      setScreen('home')
+    }
+  }
+
+  // 首页 → the remembered traveler comes back to the pit; same player, so 小俑 recalls the earlier trips.
+  const resume = async () => {
+    if (!saved) return
+    setError('')
+    stopVoice()
+    setHero(saved.hero)
+    setSprite(saved.sprite)
+    setLastStamps(saved.stamps)
+    setReady(false)
+    setMet(null)
+    setScreen('making')
+    try {
+      await startRun(saved.hero, saved.sprite)
+    } catch (e) {
+      setError(`出发失败了：${e instanceof Error ? e.message.slice(0, 120) : e}`)
       setScreen('home')
     }
   }
@@ -457,7 +504,8 @@ export default function App() {
   // Browsers allow sound only after the first tap or key press: greet right away when that has
   // already happened (e.g. back from 首页), otherwise on that first touch.
   useEffect(() => {
-    if (screen !== 'home') return
+    // A returning traveler gets the welcome-back card, not the stranger's whisper.
+    if (screen !== 'home' || welcomeBack) return
     let started = false
     const off = () => {
       removeEventListener('pointerdown', greet)
@@ -465,10 +513,11 @@ export default function App() {
     }
     function greet(e?: Event) {
       if (started) return
+      // A button does its own thing (start, mute, play the whisper), so wait for a tap that doesn't:
+      // the line would only be cut off a moment later.
+      if (e?.target instanceof Element && e.target.closest('button')) return
       started = true
       off()
-      // A tap on the bubble plays the line through the bubble's own handler.
-      if (e?.target instanceof Element && e.target.closest('.bubble, .home-scene')) return
       sayHome()
     }
     if (navigator.userActivation?.hasBeenActive) greet()
@@ -481,7 +530,7 @@ export default function App() {
       if (started) stopVoice()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen])
+  }, [screen, welcomeBack])
 
   return (
     <div className="app">
@@ -518,74 +567,153 @@ export default function App() {
 
       {screen === 'home' && (
         <div className="screen home">
-          <h1>
-            长安记得你
-            <small>带一个刚醒的兵马俑逛西安</small>
-          </h1>
-          {/* The traveler's view: 小俑 is still just a statue in the pit, whispering. */}
-          <button
-            type="button"
-            className={`home-scene${speaking ? ' is-speaking' : ''}`}
-            onClick={() => (speaking ? handleStopVoice() : playWithUnmute(sayHome))}
-          >
-            <img className="hs-statue" src="/assets/img/xiaoyong.png" alt="" draggable={false} />
-            <span className="hs-text">
-              <b>🎫 你来西安旅游，第一站：兵马俑</b>
-              <span className="hs-whisper">
-                坑里好像有谁在小声嘀咕：「{HOME_LINE}」
-                <i>{speaking ? '🔊' : '▶ 听'}</i>
-              </span>
-            </span>
-          </button>
-          <div className="card">
-            <div className="card-head">
-              <label>先说说，你是个什么样的旅人？</label>
-              <span className="route-hint">带小俑闯 5 站 → 🏁 大雁塔</span>
+          {/* The traveler's view of the pit at closing time: 小俑 is still just a statue, whispering. */}
+          <section className={`home-hero${speaking ? ' is-speaking' : ''}`}>
+            <div className="hh-motes" aria-hidden="true">
+              {Array.from({ length: 10 }, (_, i) => (
+                <i key={i} style={{ left: `${8 + i * 9}%`, animationDelay: `${(i * 1.7) % 7}s` }} />
+              ))}
             </div>
-            <textarea
-              value={text}
-              maxLength={60}
-              placeholder="例：背着单反、怕辣的上海女孩 / 一只戴墨镜的橘猫"
-              onChange={(e) => setText(e.target.value)}
-            />
-            <div className="row">
-              <button className="btn ghost" onClick={() => fileRef.current?.click()}>
-                {photo ? '📷 已选照片' : '📷 或者传张照片'}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={async (e) => {
-                  const f = e.target.files?.[0]
-                  e.target.value = '' // so picking the same file again still fires
-                  if (f) setPhoto(await fileToBase64(f))
-                }}
-              />
-              <button className="btn" disabled={!text.trim() && !photo} onClick={() => create()}>
-                出发 →
-              </button>
+            <div className="hh-title">
+              <span className="hh-kicker">西安 · 兵马俑一号坑 · 闭馆后</span>
+              <h1>长安记得你</h1>
+              <p>带一个刚醒的兵马俑，逛一趟长安</p>
             </div>
-            {photo ? (
-              <div className="photo-picked">
-                <img className="thumb" src={photo.url} alt="照片" />
-                <div>
-                  <b>✓ 照片已选好</b>
-                  <span>点「出发」把它画成 Q 版主角（约 1 分钟）</span>
-                </div>
-                <button className="link" onClick={() => setPhoto(null)}>
-                  移除
-                </button>
-              </div>
-            ) : (
-              <p className="paste-tip">💡 复制了图片？直接按 Ctrl+V 粘贴进来</p>
-            )}
-            <button className="btn quick-play" onClick={() => create(true)}>
-              ⚡ 懒得想？用默认主角「小黄」秒开玩 →
+            <button
+              type="button"
+              className="hh-statue"
+              onClick={() => (speaking ? handleStopVoice() : welcomeBack ? undefined : playWithUnmute(sayHome))}
+              aria-label={welcomeBack ? '小俑' : '听小俑小声嘀咕'}
+            >
+              <img src={welcomeBack ? '/assets/img/xiaoyong_happy.png' : '/assets/img/xiaoyong.png'} alt="" draggable={false} />
             </button>
-            {error && <p className="error">{error}</p>}
-          </div>
+            {welcomeBack ? (
+              <p className="hh-whisper is-awake">又是你！我在坑里一直等着呢。</p>
+            ) : (
+              <button type="button" className="hh-whisper" onClick={() => (speaking ? handleStopVoice() : playWithUnmute(sayHome))}>
+                「{HOME_LINE}」
+                <span className="hh-play">{speaking ? '■ 停' : '▶ 听'}</span>
+              </button>
+            )}
+          </section>
+
+          <ol className="home-route" aria-label="今日路线">
+            {[...ROUTE, 'dayanta' as const].map((p) => (
+              <li key={p} className={p === 'dayanta' ? 'goal' : ''}>
+                <span>{PLACES[p].icon}</span>
+                {p === 'dayanta' ? '大雁塔' : STOPS[p].name}
+              </li>
+            ))}
+          </ol>
+
+          {welcomeBack ? (
+            <div className="welcome-back">
+              <div className="wb-who">
+                <img src={welcomeBack.sprite} alt={welcomeBack.hero.name} />
+                <div>
+                  <small>小俑还记得你</small>
+                  <b>{welcomeBack.hero.name}</b>
+                  <span>
+                    {welcomeBack.hero.title} · 带它出来过 {runCount() || 1} 次 · 上回集了 {welcomeBack.stamps.length}/{ROUTE.length} 个章
+                  </span>
+                </div>
+              </div>
+              <button type="button" className="btn big go" onClick={resume}>
+                回坑里接小俑 →
+              </button>
+              <button type="button" className="link" onClick={() => setNewcomer(true)}>
+                我是新来的旅人，重新开始
+              </button>
+              {error && <p className="error">{error}</p>}
+            </div>
+          ) : (
+            <div className="ticket">
+              <div className="tk-band">
+                <span>长安一日游 · 入坑门票</span>
+                <b>No.1024</b>
+              </div>
+              <div className="tk-body">
+                <label htmlFor="traveler">你是个什么样的旅人？</label>
+                <p className="tk-sub">写一句或传张照片，AI 把你画成 Q 版主角，小俑会一直记得你</p>
+                <div className={`tk-input${nudge ? ' is-nudged' : ''}`}>
+                  <textarea
+                    id="traveler"
+                    ref={textRef}
+                    value={text}
+                    maxLength={60}
+                    placeholder="比如：背着单反、怕辣的上海女孩"
+                    onChange={(e) => {
+                      setText(e.target.value)
+                      setNudge(false)
+                    }}
+                  />
+                  <button type="button" className="tk-photo" onClick={() => fileRef.current?.click()}>
+                    📷 {photo ? '换照片' : '传照片'}
+                  </button>
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = '' // so picking the same file again still fires
+                    if (f) {
+                      setPhoto(await fileToBase64(f))
+                      setNudge(false)
+                    }
+                  }}
+                />
+                {nudge && <p className="tk-nudge">先写一句你的样子，或者传张照片 ↑</p>}
+                {photo ? (
+                  <div className="photo-picked">
+                    <img className="thumb" src={photo.url} alt="照片" />
+                    <div>
+                      <b>✓ 照片已选好</b>
+                      <span>出发后把它画成 Q 版主角</span>
+                    </div>
+                    <button type="button" className="link" onClick={() => setPhoto(null)}>
+                      移除
+                    </button>
+                  </div>
+                ) : (
+                  <div className="chips">
+                    {EXAMPLES.map((t) => (
+                      <button
+                        type="button"
+                        key={t}
+                        className={`chip${text === t ? ' on' : ''}`}
+                        onClick={() => {
+                          setText(t)
+                          setNudge(false)
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="btn big go" onClick={() => create()}>
+                  出发，去兵马俑 →
+                </button>
+                <p className="tk-note">画像约 1 分钟，这期间你先进坑见小俑</p>
+                <p className="paste-tip">💡 复制了图片？直接按 Ctrl+V 粘贴进来</p>
+                {error && <p className="error">{error}</p>}
+                <div className="tk-or">
+                  <span>不想填？</span>
+                </div>
+                <button type="button" className="btn quick-play" onClick={() => create(true)}>
+                  ⚡ 用默认主角「小黄」马上开玩
+                </button>
+                {saved && (
+                  <button type="button" className="link" onClick={() => setNewcomer(false)}>
+                    ← 还是我，{saved.hero.name}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <Credits />
         </div>
       )}

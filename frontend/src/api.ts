@@ -47,12 +47,15 @@ export const FOODS: Record<FoodId, { name: string; emoji: string }> = {
 const LS_PLAYER = 'changan.player'
 const LS_LOG = 'changan.log'
 const LS_RUNS = 'changan.runs'
+// The traveler's hero, sprite and last trip's stamps, so 首页 can greet them back after a reload.
+const LS_HERO = 'changan.hero'
 
 if (typeof window !== 'undefined' && (window.location.search.includes('new=1') || window.location.search.includes('reset=1'))) {
   try {
     localStorage.removeItem(LS_PLAYER)
     localStorage.removeItem(LS_LOG)
     localStorage.removeItem(LS_RUNS)
+    localStorage.removeItem(LS_HERO)
     window.history.replaceState({}, '', window.location.pathname)
   } catch {
     /* ignore */
@@ -80,9 +83,34 @@ export function resetPlayer() {
     localStorage.removeItem(LS_PLAYER)
     localStorage.removeItem(LS_LOG)
     localStorage.removeItem(LS_RUNS)
+    localStorage.removeItem(LS_HERO)
   } catch {
     /* ignore */
   }
+}
+
+export interface Traveler {
+  hero: Hero
+  sprite: string
+  stamps: StopId[]
+}
+
+export function savedTraveler(): Traveler | null {
+  try {
+    const t = JSON.parse(safeGet(LS_HERO) || 'null')
+    return t?.hero?.name && t.sprite ? { ...t, stamps: t.stamps ?? [] } : null
+  } catch {
+    return null
+  }
+}
+
+// The sprite is a few hundred KB of data URL; if storage is full the traveler just isn't remembered on 首页.
+export function saveTraveler(t: Traveler) {
+  safeSet(LS_HERO, JSON.stringify(t))
+}
+
+export function runCount(): number {
+  return Number(safeGet(LS_RUNS) || '0')
 }
 
 export function playerId(): string {

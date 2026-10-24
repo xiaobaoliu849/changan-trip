@@ -136,39 +136,8 @@ button {
   }
 }
 
-h1 {
-  margin: 12px 0 0;
-  font-size: 40px;
-  color: var(--red);
-  letter-spacing: 6px;
-  text-align: center;
-}
-
-h1 small {
-  display: block;
-  font-size: 15px;
-  letter-spacing: 1px;
-  color: var(--ink);
-  opacity: 0.75;
-  margin-top: 4px;
-}
-
 h2 {
   margin: 0;
-}
-
-.card {
-  background: #fffaf0;
-  border: 2px solid var(--paper-2);
-  border-radius: 16px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.card label {
-  font-weight: bold;
 }
 
 textarea,
@@ -294,10 +263,19 @@ textarea {
 }
 
 .paste-tip {
-  margin: -2px 0 0;
+  display: none;
+  margin: -4px 0 0;
   font-size: 12px;
+  text-align: center;
   color: #8a5a2b;
   opacity: 0.8;
+}
+
+/* Pasting is a desktop thing; phones never see the tip. */
+@media (hover: hover) and (pointer: fine) {
+  .paste-tip {
+    display: block;
+  }
 }
 
 /* 小俑 */
@@ -1491,24 +1469,8 @@ textarea {
   text-decoration: none;
 }
 
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.route-hint {
-  font-size: 12px;
-  color: var(--red);
-  background: rgba(184, 50, 42, 0.08);
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-weight: 600;
-}
-
 .btn.quick-play {
+  width: 100%;
   background: linear-gradient(135deg, #fff5dc 0%, #f6dfad 100%);
   color: var(--ink);
   border: 1.5px solid #dcb86c;
@@ -1643,79 +1605,465 @@ textarea {
   letter-spacing: 0.5px;
 }
 
-/* home: the traveler's view of the pit, 小俑 still a statue */
-.home-scene {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  min-height: 170px;
-  padding: 0;
-  border: none;
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  text-align: left;
-  color: var(--paper);
-  background: url(/assets/img/bg_bingmayong.jpg) center 70% / cover;
-  box-shadow: 0 6px 16px rgba(59, 36, 18, 0.25);
-}
-
-.home-scene::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgba(29, 20, 16, 0) 20%, rgba(29, 20, 16, 0.82) 100%);
-}
-
-.hs-statue {
-  position: absolute;
-  right: 14px;
-  bottom: 10px;
-  height: 108px;
-  filter: grayscale(0.85) sepia(0.45) brightness(0.8) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
-  transform-origin: 50% 100%;
-  animation: statue-twitch 5s ease-in-out infinite;
-}
-
-.home-scene.is-speaking .hs-statue {
-  animation: wiggle 0.5s ease-in-out infinite;
-}
-
-.hs-text {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px 110px 14px 14px;
-}
-
-.hs-text b {
-  font-size: 16px;
-}
-
-.hs-whisper {
-  font-size: 13px;
-  line-height: 1.5;
-  opacity: 0.9;
-  font-style: italic;
-}
-
-.hs-whisper i {
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: var(--red);
-  font-style: normal;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 /* A statue that only twitches once in a while: easy to miss. */
 @keyframes statue-twitch {
   0%, 86%, 100% { transform: none; }
   89% { transform: rotate(-4deg); }
   92% { transform: rotate(3deg); }
   95% { transform: rotate(-2deg); }
+}
+
+/* home: the pit at closing time, seen by the last visitor; 小俑 is still a statue */
+.home {
+  padding-top: 0;
+}
+
+.home-hero {
+  position: relative;
+  margin: 0 -16px;
+  /* Never shorter than title + 小俑 + whisper stacked, or 小俑 climbs onto the subtitle. */
+  height: clamp(430px, 54vh, 460px);
+  border-radius: 0 0 28px 28px;
+  overflow: hidden;
+  background: url(/assets/img/bg_bingmayong.jpg) center 62% / cover;
+  box-shadow: 0 10px 24px rgba(59, 36, 18, 0.28);
+}
+
+.home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 34% 26% at 50% 70%, rgba(255, 196, 110, 0.38), transparent 70%),
+    linear-gradient(rgba(18, 10, 6, 0.82) 0%, rgba(18, 10, 6, 0.3) 40%, rgba(18, 10, 6, 0.38) 68%, rgba(18, 10, 6, 0.9) 100%);
+}
+
+.hh-title {
+  position: relative;
+  padding: 58px 20px 0;
+  text-align: center;
+  color: #fbe7c0;
+}
+
+.hh-kicker {
+  display: inline-block;
+  font-size: 11.5px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  padding: 3px 12px;
+  border: 1px solid rgba(233, 169, 59, 0.45);
+  border-radius: 999px;
+  background: rgba(18, 10, 6, 0.35);
+}
+
+.hh-title h1 {
+  margin: 10px 0 0;
+  font-family: 'STKaiti', 'KaiTi', 'Kaiti SC', serif;
+  font-size: 54px;
+  line-height: 1.1;
+  letter-spacing: 8px;
+  color: #ffe6b0;
+  text-shadow:
+    0 3px 0 #7d1f1a,
+    0 0 28px rgba(233, 169, 59, 0.55);
+}
+
+.hh-title p {
+  margin: 8px 0 0;
+  font-size: 15px;
+  letter-spacing: 2px;
+  opacity: 0.9;
+}
+
+.hh-statue {
+  position: absolute;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.hh-statue img {
+  display: block;
+  height: 150px;
+  filter: grayscale(0.85) sepia(0.45) brightness(0.82) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.5));
+  transform-origin: 50% 100%;
+  animation: statue-twitch 5s ease-in-out infinite;
+}
+
+.home-hero.is-speaking .hh-statue img {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+/* Back for a remembered traveler: 小俑 is awake and glad. */
+.hh-statue:has(+ .is-awake) img {
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.5));
+  animation: bob 1.2s ease-in-out infinite alternate;
+}
+
+.hh-whisper {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 40px);
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid rgba(233, 169, 59, 0.45);
+  border-radius: 14px;
+  background: rgba(24, 14, 9, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fbe7c0;
+  font-family: 'STKaiti', 'KaiTi', 'Kaiti SC', serif;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  animation: whisper-in 0.7s ease-out 0.3s both;
+}
+
+.hh-whisper::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgb(24, 14, 9);
+  border-left: 1px solid rgba(233, 169, 59, 0.45);
+  border-top: 1px solid rgba(233, 169, 59, 0.45);
+}
+
+.hh-whisper.is-awake {
+  cursor: default;
+}
+
+.hh-play {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 9px;
+  border-radius: 10px;
+  background: var(--red);
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+@keyframes whisper-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* Dust motes drifting up through the lamplight. */
+.hh-motes i {
+  position: absolute;
+  bottom: 10%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffd98f;
+  box-shadow: 0 0 6px 1px rgba(255, 200, 110, 0.7);
+  opacity: 0;
+  animation: mote 7s linear infinite;
+}
+
+.hh-motes i:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+  animation-duration: 9s;
+}
+
+@keyframes mote {
+  15% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+    transform: translate(18px, -300px);
+  }
+}
+
+/* The day's route, as a row of stamps. */
+.home-route {
+  position: relative;
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+}
+
+.home-route::before {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: 8%;
+  right: 8%;
+  border-top: 2px dashed rgba(184, 50, 42, 0.35);
+}
+
+.home-route li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  color: #6b4a2b;
+}
+
+.home-route span {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--paper-2);
+  font-size: 17px;
+}
+
+.home-route li:first-child span {
+  border-color: var(--red);
+}
+
+.home-route li.goal {
+  color: var(--red);
+  font-weight: bold;
+}
+
+.home-route li.goal span {
+  background: #fde7c3;
+  border-color: var(--gold);
+}
+
+/* 首页 for a traveler 小俑 already knows */
+.welcome-back {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #fffaf0;
+  border: 1px solid #f0dcb0;
+  box-shadow: 0 8px 24px rgba(59, 36, 18, 0.12);
+}
+
+.wb-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wb-who img {
+  width: 78px;
+  height: 78px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 60%, #fde7c3, #f6e3bb);
+}
+
+.wb-who div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wb-who small {
+  color: var(--red);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.wb-who b {
+  font-size: 22px;
+}
+
+.wb-who span {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.welcome-back .link,
+.ticket .link {
+  align-self: center;
+  font-size: 13px;
+}
+
+/* New traveler: a ticket to fill in */
+.ticket {
+  position: relative;
+  border-radius: 18px;
+  background: #fffaf0;
+  border: 1px solid #f0dcb0;
+  box-shadow: 0 8px 24px rgba(59, 36, 18, 0.12);
+}
+
+/* Punched notches where the stub meets the ticket. */
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  top: 31px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.ticket::before {
+  left: -8px;
+  box-shadow: inset -1px 0 0 #f0dcb0;
+}
+
+.ticket::after {
+  right: -8px;
+  box-shadow: inset 1px 0 0 #f0dcb0;
+}
+
+.tk-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 18px 18px 0 0;
+  border-bottom: 2px dashed rgba(255, 230, 176, 0.5);
+  background: linear-gradient(90deg, var(--red), #d2473a);
+  color: #ffe6b0;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.tk-band b {
+  font-family: ui-monospace, Consolas, monospace;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+.tk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.tk-body label {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.tk-sub {
+  margin: -6px 0 0;
+  font-size: 12.5px;
+  color: #8a5a2b;
+}
+
+.tk-input {
+  position: relative;
+}
+
+.tk-input textarea {
+  display: block;
+  min-height: 96px;
+  padding-bottom: 40px;
+  transition: border-color 0.2s;
+}
+
+.tk-input textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.tk-input.is-nudged textarea {
+  border-color: var(--red);
+  animation: nudge 0.4s ease-in-out;
+}
+
+@keyframes nudge {
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+.tk-photo {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1.5px solid #e6cfa0;
+  background: #fff3e0;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tk-nudge {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px dashed #d9b97a;
+  background: #fff;
+  color: #6b4a2b;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.chip.on {
+  border-style: solid;
+  border-color: var(--gold);
+  background: #fde7c3;
+  color: var(--ink);
+}
+
+.tk-note {
+  margin: -4px 0 0;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.tk-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #a0815e;
+}
+
+.tk-or::before,
+.tk-or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed #e2cfa8;
 }
 
 @keyframes wiggle {
@@ -1965,7 +2313,10 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hs-statue,
+  .hh-statue img,
+  .hh-motes i,
+  .hh-whisper,
+  .tk-input textarea,
   .narration,
   .meet {
     animation: none;
