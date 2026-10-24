@@ -27,14 +27,30 @@ export default function Xiaoyong({ text, mood = 'idle', speaking, onPlay, onStop
       <div className="bubble" onClick={onPlay ? handleAudioClick : undefined} style={onPlay ? { cursor: 'pointer' } : undefined}>
         <div className="bubble-head">
           <b>小俑</b>
-          {speaking ? (
+          {onPlay && (
+            <span className={speaking ? 'listen on' : 'listen'}>
+              <span className="listen-dot" aria-hidden="true">
+                {speaking ? (
+                  <span className="eq-bars">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                ) : (
+                  <svg viewBox="0 0 12 12" width="9" height="9">
+                    <path d="M3 1.8v8.4c0 .5.5.8.9.5l6.3-4.2c.4-.3.4-.8 0-1L3.9 1.3c-.4-.3-.9 0-.9.5z" fill="currentColor" />
+                  </svg>
+                )}
+              </span>
+              {speaking ? '播放中' : '听小俑说'}
+            </span>
+          )}
+          {!onPlay && speaking && (
             <span className="eq-bars" aria-hidden="true">
               <i />
               <i />
               <i />
             </span>
-          ) : (
-            onPlay && <span className="listen">🔊 点我听</span>
           )}
         </div>
         <p>{text}</p>
