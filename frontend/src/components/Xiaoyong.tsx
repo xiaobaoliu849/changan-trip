@@ -2,6 +2,8 @@ interface Props {
   text: string
   mood?: 'idle' | 'happy' | 'confused'
   speaking?: boolean
+  onPlay?: () => void
+  onStop?: () => void
 }
 
 const IMG = {
@@ -10,12 +12,29 @@ const IMG = {
   confused: '/assets/img/xiaoyong_confused.png',
 }
 
-export default function Xiaoyong({ text, mood = 'idle', speaking }: Props) {
+export default function Xiaoyong({ text, mood = 'idle', speaking, onPlay, onStop }: Props) {
+  const handleAudioClick = () => {
+    if (speaking) {
+      onStop?.()
+    } else {
+      onPlay?.()
+    }
+  }
+
   return (
     <div className="xiaoyong">
       <img className={speaking ? 'xy-img talking' : 'xy-img'} src={IMG[mood]} alt="小俑" />
-      <div className="bubble">
-        <b>小俑</b>
+      <div className="bubble" onClick={onPlay ? handleAudioClick : undefined} style={onPlay ? { cursor: 'pointer' } : undefined}>
+        <div className="bubble-head">
+          <b>小俑</b>
+          {speaking && (
+            <span className="eq-bars" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          )}
+        </div>
         <p>{text}</p>
       </div>
     </div>
