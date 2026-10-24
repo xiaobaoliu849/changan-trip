@@ -66,7 +66,7 @@ FOODS = {
     "jingao": "甑糕",
 }
 # Same texts as the pre-made vo_opening.mp3 / vo_again.mp3, so the frontend plays those clips.
-OPENING = "原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。"
+OPENING = "原来你是这个样子！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。"
 AGAIN = "又是你！我在坑里一直等着呢。走，接着带我出去逛！"
 ASSET_DIR = Path(__file__).resolve().parent.parent / "frontend" / "public" / "assets"
 
@@ -263,7 +263,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         "\"food_order\":[\"回民街你点给旅人、让TA替你吃的3个美食id，优先TA没吃过的\"],"
         "\"spicy_tease\":TA怕辣或上次被辣到就true,"
         "\"wall_warn\":\"如果TA在城墙某处撞过，写一句提醒，否则空字符串\","
-        "\"stop_lines\":{\"景点id\":\"到该景点时小俑说的一句话，30字内：一个这个景点的真实小知识或小俑式吐槽，能结合记忆就结合\"}}"
+        "\"stop_lines\":{\"景点id\":\"旅人刚给你介绍完这个景点，小俑的一句反应，25字内：第一次见的好奇、秦朝人的吐槽，能结合记忆就结合；景点由旅人介绍，你不要当导游讲解\"}}"
     )
     try:
         plan = await ai.generate_json(prompt)

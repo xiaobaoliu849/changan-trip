@@ -29,21 +29,33 @@ const GAMES: Record<StopId, GameFactory> = {
 
 // Pre-made clips in public/assets/voice/ speak these exact lines; regenerate with `python -m backend.make_voice` (keep LINES there in sync).
 // Bump VOICE_VERSION after regenerating so browsers drop cached old clips.
-const VOICE_VERSION = 7
+const VOICE_VERSION = 9
 const clip = (name: string) => `/assets/voice/vo_${name}.mp3?v=${VOICE_VERSION}`
 // Whispered from the pit before the traveler has met 小俑.
 const HOME_LINE = '两千两百年了……今天，会有人带我出去看看吗？'
-const OPENING_LINE = '原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。'
+const OPENING_LINE = '原来你是这个样子！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。'
 // 再游一次 when no memory-based greeting could be written: the traveler is back at the pit for 小俑.
 const AGAIN_LINE = '又是你！我在坑里一直等着呢。走，接着带我出去逛！'
-const FINAL_LINE = '大雁塔到了！谢谢你带我出来开眼。天亮前我得回坑里站好，临走前，有啥想对我说的？我记小本本上。'
-const DEFAULT_LINES: Record<StopId, string> = {
-  zhonglou: '钟楼六百多岁，比我年轻多了。从前钟一响，全城起床。你来敲，我捂耳朵。',
-  huiminjie: '回民街到啦！我是泥做的，吃不了……我点菜，你替我吃！辣子可别碰！',
-  bingmayong: '糟了，我那帮老战友也想溜出来！找出偷偷动的那个，把它按回去。',
-  chengqiang: '城墙是明朝修的，一圈十三点七四公里，比我年轻一千五百多岁。我坐车筐里，你骑！',
-  datang: '大唐不夜城，比我们秦朝的晚上亮多了！你顶着灯笼走，我在旁边给你喊号子。',
+const FINAL_LINE = '大雁塔到了！谢谢你带我出来开眼。天亮前我要回坑里站好，临走前，有啥想对我说的？我记小本本上。'
+// At each stop the traveler shows 小俑 the place (YOU_LINES, text only) and 小俑 reacts (voiced).
+// 小俑 never plays tour guide: it's the one seeing everything for the first time.
+// Pre-made clips mispronounce polyphones (行家 came out xíngjiā), so keep 行/长/了/得/当/朝 out of voiced lines.
+const YOU_LINES: Record<StopId, string> = {
+  bingmayong: '出发前，跟你的老战友们道个别？',
+  chengqiang: '这是西安城墙，明朝修的，一圈 13.74 公里。',
+  zhonglou: '这是钟楼，六百多岁了。从前钟一响，全城起床。',
+  huiminjie: '回民街到了，西安最有名的小吃街！',
+  datang: '大唐不夜城，晚上比白天还亮。',
 }
+const DEFAULT_LINES: Record<StopId, string> = {
+  bingmayong: '糟了，他们也想溜出来！找出偷偷动的那个，把它按回去。',
+  chengqiang: '比我年轻一千五百多岁！我坐车筐里，你骑！',
+  zhonglou: '才六百岁？小娃娃嘛！你来敲，我捂耳朵。',
+  huiminjie: '我是泥做的，不能吃……我点菜，你替我吃！辣子可别碰！',
+  datang: '我那会儿晚上可没这么亮！你顶灯笼，我给你喊号子。',
+}
+// 小俑's reaction starts a moment after the intro appears, so the traveler's line is read first.
+const INTRO_DELAY = 700
 
 // 小俑问你: after each stop 小俑 asks about something modern; tapping an answer is also "next stop".
 // It believes whatever it is told, and the answer goes into its memory for the journal and the next trip.
@@ -52,7 +64,7 @@ const QUESTIONS: Record<StopId, { q: string; answers: { say: string; reply: stri
   bingmayong: {
     q: '外面的人咋都不穿铠甲？不打仗了？',
     answers: [
-      { say: '现在太平，不打仗啦', reply: '太平好！那我这身铠甲……就当睡衣穿吧。' },
+      { say: '现在太平，不打仗啦', reply: '太平好！那我这身铠甲……改成睡衣吧。' },
       { say: '铠甲在洗衣机里洗呢', reply: '洗衣机？那是啥兵器？我记小本本上了！' },
     ],
   },
@@ -73,7 +85,7 @@ const QUESTIONS: Record<StopId, { q: string; answers: { say: string; reply: stri
   huiminjie: {
     q: '肉夹馍，到底是肉夹馍，还是馍夹肉？',
     answers: [
-      { say: '是「肉夹于馍」，古汉语', reply: '古汉语？那我是行家，早该听懂的！' },
+      { say: '是「肉夹于馍」，古汉语', reply: '古汉语？那我熟啊，早该听懂的！' },
       { say: '别问，吃就完了', reply: '有道理！可我是泥做的，只能闻闻。' },
     ],
   },
@@ -161,6 +173,8 @@ export default function App() {
   const [answer, setAnswer] = useState<number | null>(null)
   const [replyDone, setReplyDone] = useState(false)
   const answerTimer = useRef(0)
+  // 小俑's intro line, due INTRO_DELAY after the intro opens; dropped if the intro is left first.
+  const introTimer = useRef(0)
   // Which answer's reply is still playing (`${runId}:${step}`), so a late reply can't move the trip on.
   const pendingReply = useRef('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -303,9 +317,12 @@ export default function App() {
     ])
     setAssets({ bg, hero: heroImg, xiaoyong: xy })
     setScreen('intro')
-    const line = brief?.stop_lines[stop]
-    if (line) sayText(line)
-    else say(clip(stop))
+    introTimer.current = window.setTimeout(() => sayStop(stop), INTRO_DELAY)
+  }
+
+  const sayStop = (s: StopId) => {
+    const line = brief?.stop_lines[s]
+    return line ? sayText(line) : say(clip(s))
   }
 
   const onDone = (r: StopResult) => {
@@ -342,6 +359,10 @@ export default function App() {
       answerTimer.current = window.setTimeout(next, AUTO_GO)
     })
   }
+
+  useEffect(() => {
+    if (screen !== 'intro') clearTimeout(introTimer.current)
+  }, [screen])
 
   // Leaving the result screen any other way (首页, or tapping on) cancels the automatic move on.
   useEffect(() => {
@@ -685,27 +706,36 @@ export default function App() {
       )}
 
       {screen === 'intro' && stop && assets && (
-        <div className="screen intro" style={{ backgroundImage: `url(/assets/img/bg_${stop}.jpg)` }}>
-          <div className="intro-inner">
-            <div className="stop-tag">
-              第 {step + 1} 站 · 你带小俑来到{STOPS[stop].name}
+        <div className="screen intro">
+          <div className="intro-hero">
+            <img className="ih-bg" src={`/assets/img/bg_${stop}.jpg`} alt={STOPS[stop].name} />
+            <div className="ih-title">
+              <small>
+                第 {step + 1} / {route.length} 站 · 你带小俑来到
+              </small>
+              <h2>{STOPS[stop].name}</h2>
+            </div>
+          </div>
+          <div className="intro-body">
+            <div className="you-line">
+              <div className="you-bubble">
+                <b>你</b>
+                <p>{YOU_LINES[stop]}</p>
+              </div>
+              <img src={sprite} alt={hero?.name ?? '你'} />
             </div>
             <Xiaoyong
               text={brief?.stop_lines[stop] || DEFAULT_LINES[stop]}
               speaking={speaking}
-              onPlay={() =>
-                playWithUnmute(() => {
-                  const line = brief?.stop_lines[stop]
-                  if (line) sayText(line)
-                  else say(clip(stop))
-                })
-              }
+              onPlay={() => playWithUnmute(() => sayStop(stop))}
               onStop={handleStopVoice}
             />
             <div className="card how">
-              <b>玩法</b>
+              <div className="how-head">
+                <b>玩法</b>
+                <span className="lives">{'❤️'.repeat(Math.max(0, lives))}{'🤍'.repeat(Math.max(0, LIVES - lives))}</span>
+              </div>
               <p>{STOPS[stop].hint}</p>
-              <p className="lives">体力 {'❤️'.repeat(lives)}</p>
             </div>
             {/* 小俑 keeps talking into the game instead of being cut off mid-sentence. */}
             <button className="btn big" onClick={() => setScreen('play')}>

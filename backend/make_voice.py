@@ -26,14 +26,17 @@ LINES = {
     "wake": "嘘！别喊！我在坑里站了两千两百年，外面啥样都没见过……你带我出去转转呗？",
     "wake_talk": "会！还会背秦律呢。走不走嘛？",
     "wake_go": "好嘞！等我拍拍土……走！",
-    "opening": "原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。",
+    "opening": "原来你是这个样子！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。",
     # 再游一次: the traveler comes back to the pit for 小俑 (fallback when no memory line is written).
     "again": "又是你！我在坑里一直等着呢。走，接着带我出去逛！",
-    "zhonglou": "钟楼六百多岁，比我年轻多了。从前钟一响，全城起床。你来敲，我捂耳朵。",
-    "huiminjie": "回民街到啦！我是泥做的，吃不了……我点菜，你替我吃！辣子可别碰！",
-    "bingmayong": "糟了，我那帮老战友也想溜出来！找出偷偷动的那个，把它按回去。",
-    "chengqiang": "城墙是明朝修的，一圈十三点七四公里，比我年轻一千五百多岁。我坐车筐里，你骑！",
-    "datang": "大唐不夜城，比我们秦朝的晚上亮多了！你顶着灯笼走，我在旁边给你喊号子。",
+    # 小俑's reaction after the traveler shows it each stop (the traveler's line is text only).
+    # Keep polyphones out (行 长 了 得 当 朝 …): the TTS read 行家 as xíngjiā, and the transcript check
+    # can't hear that, since it writes the right character either way. 肉夹馍 stays: the joke needs it.
+    "zhonglou": "才六百岁？小娃娃嘛！你来敲，我捂耳朵。",
+    "huiminjie": "我是泥做的，不能吃……我点菜，你替我吃！辣子可别碰！",
+    "bingmayong": "糟了，他们也想溜出来！找出偷偷动的那个，把它按回去。",
+    "chengqiang": "比我年轻一千五百多岁！我坐车筐里，你骑！",
+    "datang": "我那会儿晚上可没这么亮！你顶灯笼，我给你喊号子。",
     # 小俑问你: asked on each stop's result screen.
     "q_bingmayong": "外面的人咋都不穿铠甲？不打仗了？",
     "q_chengqiang": "那些人举着棍子对自己笑，是在施法吗？",
@@ -41,17 +44,17 @@ LINES = {
     "q_huiminjie": "肉夹馍，到底是肉夹馍，还是馍夹肉？",
     "q_datang": "这么亮，晚上谁睡觉啊？",
     # 小俑's reply to each answer (a_<stop>_<answer index>); the trip moves on once it ends.
-    "a_bingmayong_0": "太平好！那我这身铠甲……就当睡衣穿吧。",
+    "a_bingmayong_0": "太平好！那我这身铠甲……改成睡衣吧。",
     "a_bingmayong_1": "洗衣机？那是啥兵器？我记小本本上了！",
     "a_chengqiang_0": "自拍杆……我也想要一根！",
     "a_chengqiang_1": "我就知道！回去教给老战友。",
     "a_zhonglou_0": "会发光的竹简，还会喊人起床？厉害！",
     "a_zhonglou_1": "那我也不起了，明天睡到晌午！",
-    "a_huiminjie_0": "古汉语？那我是行家，早该听懂的！",
+    "a_huiminjie_0": "古汉语？那我熟啊，早该听懂的！",
     "a_huiminjie_1": "有道理！可我是泥做的，只能闻闻。",
     "a_datang_0": "那我今天也是游客啦！头一回当游客。",
     "a_datang_1": "难怪钟楼的钟退休了！",
-    "dayanta": "大雁塔到了！谢谢你带我出来开眼。天亮前我得回坑里站好，临走前，有啥想对我说的？我记小本本上。",
+    "dayanta": "大雁塔到了！谢谢你带我出来开眼。天亮前我要回坑里站好，临走前，有啥想对我说的？我记小本本上。",
 }
 OUT = Path(__file__).resolve().parent.parent / "frontend" / "public" / "assets" / "voice"
 TRIES = 5
