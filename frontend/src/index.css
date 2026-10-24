@@ -942,6 +942,17 @@ textarea {
   animation: bob 1.6s ease-in-out infinite alternate;
 }
 
+/* 小俑 stands with the traveler at the finish, half a step behind. */
+.fh-xy {
+  position: absolute;
+  left: 112px;
+  bottom: 10px;
+  height: 92px;
+  z-index: 1;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35));
+  animation: bob 1.6s ease-in-out 0.4s infinite alternate;
+}
+
 .fh-title {
   position: absolute;
   right: 20px;
@@ -1487,4 +1498,333 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* home: the traveler's view of the pit, 小俑 still a statue */
+.home-scene {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 170px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  color: var(--paper);
+  background: url(/assets/img/bg_bingmayong.jpg) center 70% / cover;
+  box-shadow: 0 6px 16px rgba(59, 36, 18, 0.25);
+}
+
+.home-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(29, 20, 16, 0) 20%, rgba(29, 20, 16, 0.82) 100%);
+}
+
+.hs-statue {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  height: 108px;
+  filter: grayscale(0.85) sepia(0.45) brightness(0.8) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+  transform-origin: 50% 100%;
+  animation: statue-twitch 5s ease-in-out infinite;
+}
+
+.home-scene.is-speaking .hs-statue {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+.hs-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 110px 14px 14px;
+}
+
+.hs-text b {
+  font-size: 16px;
+}
+
+.hs-whisper {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.hs-whisper i {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--red);
+  font-style: normal;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* A statue that only twitches once in a while: easy to miss. */
+@keyframes statue-twitch {
+  0%, 86%, 100% { transform: none; }
+  89% { transform: rotate(-4deg); }
+  92% { transform: rotate(3deg); }
+  95% { transform: rotate(-2deg); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-6deg) translateX(-2px); }
+  75% { transform: rotate(5deg) translateX(2px); }
+}
+
+/* prologue */
+.prologue {
+  position: relative;
+  padding-top: 16px;
+  background: #1d1410;
+  color: var(--paper);
+}
+
+.skip {
+  position: absolute;
+  top: 18px;
+  left: 14px;
+  z-index: 5;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 246, 224, 0.4);
+  border-radius: 20px;
+  background: rgba(29, 20, 16, 0.6);
+  color: var(--paper);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pit {
+  position: relative;
+  height: min(62vh, 620px);
+  margin: -16px -16px 0;
+  background: url(/assets/img/bg_bingmayong.jpg) center 75% / cover;
+  overflow: hidden;
+}
+
+.pit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(rgba(29, 20, 16, 0.35), rgba(29, 20, 16, 0) 40%, rgba(29, 20, 16, 0.9));
+  transition: background 0.6s;
+}
+
+.pit-row {
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: 5%;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.statue {
+  position: relative;
+  width: 21%;
+  margin: 0 -1%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform-origin: 50% 100%;
+}
+
+/* Back-and-forth heights so the row reads as standing in ranks. */
+.statue:nth-child(even) {
+  margin-bottom: 10px;
+}
+
+.statue img {
+  display: block;
+  width: 100%;
+  filter: grayscale(0.85) sepia(0.45) brightness(0.75) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The mover twitches now and then; you have to be watching. */
+.statue.wiggle {
+  animation: statue-twitch 2.4s ease-in-out infinite;
+}
+
+.statue.miss {
+  animation: wiggle 0.3s ease-in-out 2;
+}
+
+.miss-tag {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 246, 224, 0.9);
+  color: var(--ink);
+}
+
+/* Once awake, 小俑 hops out of the row and down to the traveler. */
+.pit.awake .statue.mover {
+  animation: hop-out 0.7s ease-in forwards;
+  pointer-events: none;
+}
+
+.pit.awake .statue.mover img {
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.45));
+}
+
+@keyframes hop-out {
+  30% { transform: translateY(-40%) scale(1.15); }
+  100% { transform: translateY(80%) scale(1.6); opacity: 0; }
+}
+
+.dust {
+  position: absolute;
+  left: 66%;
+  bottom: 8%;
+  z-index: 2;
+  font-size: 44px;
+  animation: dust 0.9s ease-out forwards;
+}
+
+@keyframes dust {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.8) translateY(-20px); opacity: 0; }
+}
+
+.narration {
+  margin-top: -36px;
+  padding: 0 4px;
+  position: relative;
+  z-index: 1;
+  animation: rise 0.5s ease-out both;
+}
+
+.narration p {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.tap-hint {
+  color: var(--gold);
+  font-weight: bold;
+  animation: hint-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes hint-blink {
+  50% { opacity: 0.45; }
+}
+
+.meet {
+  margin-top: -56px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--ink);
+  animation: rise 0.5s ease-out 0.3s both;
+}
+
+.meet-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meet .btn.ghost {
+  background: transparent;
+  color: var(--paper);
+  border-color: rgba(255, 246, 224, 0.6);
+}
+
+/* result: 小俑问你 */
+.ask {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--paper-2);
+}
+
+.ask-tag {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--jade);
+}
+
+.ask .xy-img {
+  width: 72px;
+}
+
+.ask .bubble {
+  margin-bottom: 18px;
+}
+
+.answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.answers .btn {
+  padding: 12px 8px;
+  font-size: 15px;
+}
+
+.ask-note {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* The next-stop button fills up and fires by itself after 小俑's reply. */
+.btn.auto {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn.auto::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(255, 255, 255, 0.22);
+  transform-origin: left;
+  animation: fill-up linear both;
+  animation-duration: inherit;
+}
+
+@keyframes fill-up {
+  from { transform: scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-statue,
+  .narration,
+  .meet {
+    animation: none;
+  }
 }

@@ -1,6 +1,6 @@
 """Regenerate the pre-made voice lines in frontend/public/assets/voice/ with Gemini TTS.
 
-Run from the repo root:  python -m backend.make_voice [name ...]   (needs GEMINI_API_KEY in .env and `pip install lameenc`)
+Run from the repo root:  python -m backend.make_voice [name ...]   (needs AGENT_PLATFORM_API_KEY or GEMINI_API_KEY in .env, and `pip install lameenc`)
 Uses the same call as the live game (style in speech_metadata, never in the text), and each clip
 is still transcribed back and regenerated until it says exactly its line. Keep LINES in sync with the matching text in frontend/src/App.tsx.
 """
@@ -20,18 +20,43 @@ from . import main  # noqa: F401 - loads .env
 from .services import ai
 
 LINES = {
-    "home": "我在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉我。",
-    "opening": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
-    "zhonglou": "这是钟楼，六百多岁，比我年轻多了。跟着钟声敲，可别吵醒全城。",
-    "huiminjie": "回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。",
-    "bingmayong": "这是我老家！我那帮老战友里，总有一个偷偷动了一下。",
-    "chengqiang": "城墙一圈十三点七四公里，骑上车，躲开游客和自拍杆！",
-    "datang": "大唐不夜城比我那会儿还亮堂，头顶的灯笼可稳住喽。",
-    "dayanta": "大雁塔到了，咱今天这趟没白走。临走前，有啥想对我说的？我记小本本上，下回你来，我还认得你。",
+    # Whispered from the pit on the home screen, before the traveler has met 小俑.
+    "home": "两千两百年了……今天，会有人带我出去看看吗？",
+    # Prologue: the traveler spots the warrior that moved.
+    "wake": "嘘！别喊！我在坑里站了两千两百年，外面啥样都没见过……你带我出去转转呗？",
+    "wake_talk": "会！还会背秦律呢。走不走嘛？",
+    "wake_go": "好嘞！等我拍拍土……走！",
+    "opening": "原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。",
+    # 再游一次: the traveler comes back to the pit for 小俑 (fallback when no memory line is written).
+    "again": "又是你！我在坑里一直等着呢。走，接着带我出去逛！",
+    "zhonglou": "钟楼六百多岁，比我年轻多了。从前钟一响，全城起床。你来敲，我捂耳朵。",
+    "huiminjie": "回民街到啦！我是泥做的，吃不了……我点菜，你替我吃！辣子可别碰！",
+    "bingmayong": "糟了，我那帮老战友也想溜出来！找出偷偷动的那个，把它按回去。",
+    "chengqiang": "城墙是明朝修的，一圈十三点七四公里，比我年轻一千五百多岁。我坐车筐里，你骑！",
+    "datang": "大唐不夜城，比我们秦朝的晚上亮多了！你顶着灯笼走，我在旁边给你喊号子。",
+    # 小俑问你: asked on each stop's result screen.
+    "q_bingmayong": "外面的人咋都不穿铠甲？不打仗了？",
+    "q_chengqiang": "那些人举着棍子对自己笑，是在施法吗？",
+    "q_zhonglou": "现在钟不响了，大家咋知道起床？",
+    "q_huiminjie": "肉夹馍，到底是肉夹馍，还是馍夹肉？",
+    "q_datang": "这么亮，晚上谁睡觉啊？",
+    # 小俑's reply to each answer (a_<stop>_<answer index>); the trip moves on once it ends.
+    "a_bingmayong_0": "太平好！那我这身铠甲……就当睡衣穿吧。",
+    "a_bingmayong_1": "洗衣机？那是啥兵器？我记小本本上了！",
+    "a_chengqiang_0": "自拍杆……我也想要一根！",
+    "a_chengqiang_1": "我就知道！回去教给老战友。",
+    "a_zhonglou_0": "会发光的竹简，还会喊人起床？厉害！",
+    "a_zhonglou_1": "那我也不起了，明天睡到晌午！",
+    "a_huiminjie_0": "古汉语？那我是行家，早该听懂的！",
+    "a_huiminjie_1": "有道理！可我是泥做的，只能闻闻。",
+    "a_datang_0": "那我今天也是游客啦！头一回当游客。",
+    "a_datang_1": "难怪钟楼的钟退休了！",
+    "dayanta": "大雁塔到了！谢谢你带我出来开眼。天亮前我得回坑里站好，临走前，有啥想对我说的？我记小本本上。",
 }
 OUT = Path(__file__).resolve().parent.parent / "frontend" / "public" / "assets" / "voice"
 TRIES = 5
-CHECK_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+CHECK_MODEL = "gemini-3.5-flash"
+CHECK_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{CHECK_MODEL}:generateContent"
 
 
 def _norm(s: str) -> str:
@@ -43,8 +68,12 @@ def _norm(s: str) -> str:
 
 
 async def transcribe(pcm: bytes) -> str:
-    resp = await ai._http().post(CHECK_URL, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json={
-        "contents": [{"parts": [
+    # Same Agent Platform key as the TTS when it is set, so the check doesn't hit the AI Studio rate limit.
+    agent_key = os.getenv("AGENT_PLATFORM_API_KEY", "")
+    url = ai.agent_platform_url(CHECK_MODEL) if agent_key else CHECK_URL
+    key = agent_key or os.environ["GEMINI_API_KEY"]
+    resp = await ai._http().post(url, headers={"x-goog-api-key": key}, json={
+        "contents": [{"role": "user", "parts": [
             {"inlineData": {"mimeType": "audio/wav", "data": base64.b64encode(ai.pcm_to_wav(pcm)).decode()}},
             {"text": "逐字转写这段音频里说的全部中文，数字也用汉字写，只输出转写文字，不要加任何解释。"},
         ]}],
@@ -86,6 +115,8 @@ async def best_take(text: str) -> tuple[bytes, str, float]:
             heard = await transcribe(pcm)
         except Exception as exc:  # noqa: BLE001 - flaky network: just take another go
             print(f"  retry ({exc!s:.80})")
+            if "429" in str(exc):  # rate limit: give the per-minute quota time to refill
+                await asyncio.sleep(40)
             continue
         score = difflib.SequenceMatcher(None, _norm(text), _norm(heard)).ratio()
         if len(pcm) / 48000 > max_secs(text):

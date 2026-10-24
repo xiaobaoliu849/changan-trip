@@ -18,6 +18,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
   const items: Item[] = []
   const pops: { text: string; x: number; y: number; t: number; color: string }[] = []
   let x = W / 2
+  let xy = W / 2 - 80 // 小俑 trails beside the hero, on whichever side has room
   let left = false
   let right = false
   let dragX: number | null = null
@@ -36,11 +37,12 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       .map(([k, n]) => `${FOODS[k as FoodId].name}×${n}`)
       .join('、')
     const extra = Object.keys(caught).filter((k) => k !== 'chili' && k !== 'bonus' && !order.includes(k as FoodId))
+    // 你 is the traveler, who eats for 小俑; it is swapped for the hero's name when this goes into memory.
     const detail =
-      `客人点了${order.map((f) => FOODS[f].name).join('、')}；接到${got || '什么都没接到'}` +
+      `小俑点了${order.map((f) => FOODS[f].name).join('、')}让你替它吃；你接到${got || '什么都没接到'}` +
       (extra.length ? `（还顺手接了不在单子上的${extra.map((k) => FOODS[k as FoodId].name).join('、')}）` : '') +
-      `；被辣子辣到${chili}次` +
-      (passed ? `，${Math.round(TIME - time)}秒凑齐了订单` : chili >= 3 ? '，辣晕了' : `，时间到还差${remaining()}份`)
+      `；你被辣子辣到${chili}次` +
+      (passed ? `，${Math.round(TIME - time)}秒凑齐了小俑点的菜` : chili >= 3 ? '，你辣晕了' : `，时间到还差${remaining()}份`)
     finish({ passed, detail })
   }
 
@@ -52,6 +54,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       if (dragX !== null) x += (dragX - x) * Math.min(1, dt * 14)
       else x += ((right ? 1 : 0) - (left ? 1 : 0)) * 420 * dt
       x = Math.max(40, Math.min(W - 40, x))
+      xy += (x + (x > W / 2 ? -78 : 78) - xy) * Math.min(1, dt * 5)
 
       spawn -= dt
       if (spawn <= 0) {
@@ -76,6 +79,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
             chili++
             flash = 0.4
             pops.push({ text: '好辣！', x: it.x, y: it.y - 40, t: 0.8, color: '#ff5a36' })
+            pops.push({ text: '快喝水！', x: xy, y: H - 140, t: 0.9, color: '#d0f0ff' })
           } else if (order.includes(it.kind) && caught[it.kind] <= NEED_EACH) {
             pops.push({ text: `+${FOODS[it.kind].name}`, x: it.x, y: it.y - 40, t: 0.8, color: '#ffe066' })
           } else {
@@ -103,7 +107,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
       ctx.textBaseline = 'middle'
       ctx.fillStyle = '#5a2d12'
       ctx.textAlign = 'left'
-      ctx.fillText('订单', 26, 92)
+      ctx.fillText('小俑点', 22, 92)
       ctx.font = 'bold 15px "PingFang SC", "Microsoft YaHei", sans-serif'
       order.forEach((f, i) => {
         const done = Math.min(NEED_EACH, caught[f] || 0)
@@ -126,6 +130,7 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
           ctx.restore()
         } else ctx.fillText(it.kind === 'chili' ? '🌶️' : FOODS[it.kind].emoji, it.x, it.y)
       }
+      drawSprite(ctx, assets.xiaoyong, xy, H - 40, 84, xy > x)
       drawSprite(ctx, assets.hero, x, H - 40, 130)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color, 22)
       if (flash > 0) {

@@ -65,12 +65,18 @@ FOODS = {
     "paomo": "羊肉泡馍",
     "jingao": "甑糕",
 }
+# Same texts as the pre-made vo_opening.mp3 / vo_again.mp3, so the frontend plays those clips.
+OPENING = "原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。"
+AGAIN = "又是你！我在坑里一直等着呢。走，接着带我出去逛！"
 ASSET_DIR = Path(__file__).resolve().parent.parent / "frontend" / "public" / "assets"
 
 XIAOYONG = (
-    "你是「小俑」，一个在兵马俑坑里站了2200年、第一次出门的秦朝兵马俑，现在当西安导游。"
-    "说话憨厚、慢吞吞、自称「我」（绝不用「俺」，配音会读错），有点自豪，对现代事物一知半解（把地铁叫「地下铁马车」，手机叫「会发光的竹简」）。"
-    "你以前记性很差，新装了一个会记事的宝贝（EverOS），所以能记得旅人以前的事。"
+    "你是「小俑」，一个在兵马俑坑里站了2200年的秦朝兵马俑。闭馆后一位旅人发现你会动，答应带你出坑逛西安。"
+    "是旅人带着你玩：路是TA带你走的，关是TA闯的，你是跟着出来见世面的小跟班，绝不是导游，不说「我带你」「我陪你逛」。"
+    "你对秦朝的事很熟，西安的景点都比你年轻；对两千年后的现代事物一知半解（把地铁叫「地下铁马车」，手机叫「会发光的竹简」），旅人教你什么你都信。"
+    "说话憨厚、慢吞吞、自称「我」（绝不用「俺」，配音会读错），有点自豪。"
+    "称呼旅人只用「你」或TA的名字，不用「他」「她」（你不知道TA是男是女）。"
+    "你以前记性很差，新装了一个会记事的宝贝（EverOS），所以能记得旅人以前带你出来时的事。"
 )
 
 
@@ -118,6 +124,13 @@ class RunEndIn(BaseModel):
     stamps: list[str] = Field(default_factory=list)
     log: list[str] = Field(default_factory=list)
     said: str = ""
+
+
+class NoteIn(BaseModel):
+    player_id: str
+    run_id: str
+    text: str
+    role: str = "assistant"
 
 
 class TtsIn(BaseModel):
@@ -227,8 +240,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
     memories = (remote or body.local_log[-8:]) if body.run_no > 1 else []
     if not memories:
         return {
-            # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip immediately.
-            "greeting": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
+            "greeting": AGAIN if body.run_no > 1 else OPENING,
             "recalled": [],
             "route": ROUTE,
             "food_order": ["roujiamo", "biangbiang", "liangpi"],
@@ -240,18 +252,18 @@ async def brief(body: BriefIn) -> dict[str, Any]:
     prompt = (
         XIAOYONG
         + f"\n旅人：{body.hero.name}（{body.hero.title}），偏好：{'、'.join(body.hero.traits) or '未知'}。"
-        + f"这是TA第{body.run_no}次来玩。\n"
+        + f"这是TA第{body.run_no}次来坑里找你、带你出门。\n"
         + ("你记得的事：\n- " + "\n- ".join(memories) if memories else "你对TA没有任何记忆，这是第一次见面。")
         + "\n景点id：" + "、".join(f"{k}={v}" for k, v in STOPS.items())
         + "\n美食id：" + "、".join(f"{k}={v}" for k, v in FOODS.items())
         + "\n提到往事时只能用上面记得的事，不许编造旅人没做过的事。"
         + "\n只返回 JSON：{"
-        "\"greeting\":\"小俑开场白，60字内；有记忆就具体提起1-2件往事并调侃，没记忆就说初次见面、我会记住你\","
+        "\"greeting\":\"旅人又来坑里接你出门，小俑的开场白，60字内；有记忆就具体提起1-2件往事并调侃，旅人以前教过你的现代玩意儿（不管真假你都信了）最值得翻旧账；没记忆就说初次见面、我会记住你\","
         "\"recalled\":[\"小本本上写的往事，每条20字内，最多3条，只能改写上面「你记得的事」里真实发生过的，绝不编造，没有就空数组\"],"
-        "\"food_order\":[\"回民街顾客要的3个美食id，优先TA没吃过的\"],"
+        "\"food_order\":[\"回民街你点给旅人、让TA替你吃的3个美食id，优先TA没吃过的\"],"
         "\"spicy_tease\":TA怕辣或上次被辣到就true,"
         "\"wall_warn\":\"如果TA在城墙某处撞过，写一句提醒，否则空字符串\","
-        "\"stop_lines\":{\"景点id\":\"到该景点时小俑说的一句话，25字内，能结合记忆就结合\"}}"
+        "\"stop_lines\":{\"景点id\":\"到该景点时小俑说的一句话，30字内：一个这个景点的真实小知识或小俑式吐槽，能结合记忆就结合\"}}"
     )
     try:
         plan = await ai.generate_json(prompt)
@@ -260,8 +272,7 @@ async def brief(body: BriefIn) -> dict[str, Any]:
         plan = {}
     food = [f for f in plan.get("food_order", []) if f in FOODS][:3] or ["roujiamo", "biangbiang", "liangpi"]
     return {
-        # Same text as the pre-made vo_opening.mp3, so the frontend plays that clip.
-        "greeting": plan.get("greeting") or "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
+        "greeting": plan.get("greeting") or AGAIN,
         "recalled": plan.get("recalled", [])[:3] if memories else [],
         "route": ROUTE,
         "food_order": food,
@@ -276,25 +287,34 @@ async def brief(body: BriefIn) -> dict[str, Any]:
 async def stop_done(body: StopIn) -> dict[str, Any]:
     place = STOPS.get(body.stop, body.stop)
     line = (
-        f"第{body.run_no}次游西安，{body.hero.name}在{place}"
-        f"{'过关了' if body.passed else '没过关'}：{body.detail}"
+        f"第{body.run_no}次游西安，{body.hero.name}带小俑到了{place}，"
+        # Game summaries call the player 你; in memory 你 would read as whoever 小俑 is talking to.
+        f"{'过关了' if body.passed else '没过关'}：{body.detail.replace('你', body.hero.name)}"
     )
     saved = await _remember(body.player_id, body.run_id, line)
     return {"saved": saved, "line": line}
+
+
+@app.post("/api/note")
+async def note(body: NoteIn) -> dict[str, Any]:
+    """Something that happened between stops: how the traveler met 小俑, or what they told it."""
+    saved = await _remember(body.player_id, body.run_id, body.text.strip()[:200], role=body.role)
+    return {"saved": saved}
 
 
 @app.post("/api/run_end")
 async def run_end(body: RunEndIn) -> dict[str, Any]:
     if body.said.strip():
         await _remember(body.player_id, body.run_id, f"旅人对小俑说：{body.said.strip()}", role="user")
-    summary = f"第{body.run_no}次游西安结束，{body.hero.name}集到了{len(body.stamps)}个印章：{'、'.join(body.stamps) or '无'}。"
+    summary = f"第{body.run_no}次带小俑游西安结束，{body.hero.name}集到了{len(body.stamps)}个印章：{'、'.join(body.stamps) or '无'}。"
     saved = await _remember(body.player_id, body.run_id, summary, flush=True)
     prompt = (
         XIAOYONG
-        + f"\n今天陪旅人{body.hero.name}（{body.hero.title}）逛了西安，经过：\n- "
+        + f"\n今天旅人{body.hero.name}（{body.hero.title}）带你出坑逛了西安，经过：\n- "
         + "\n- ".join(body.log or ["（没走几站）"])
         + (f"\n旅人最后对你说：「{body.said}」" if body.said else "")
-        + "\n只返回 JSON：{\"journal\":\"小俑写的今日游记，90字内，具体、好笑、有点感动\","
+        + "\n一路上你问过旅人一些现代的事，TA教你的不管真假你都信了，游记里挑一件提一句。"
+        + "\n只返回 JSON：{\"journal\":\"小俑写的今日游记，90字内，用被旅人带出来见世面的口吻（是TA带你，不是你陪TA），具体、好笑、有点感动\","
         "\"comment\":\"给旅人的一句评语，印在通关文牒上，16字内\"}"
     )
     try:
@@ -303,7 +323,7 @@ async def run_end(body: RunEndIn) -> dict[str, Any]:
         logger.warning("journal failed: %s", exc)
         out = {}
     return {
-        "journal": out.get("journal") or "今天我陪你逛了长安，我都记在小本本上啦，下回你来，我还认得你。",
+        "journal": out.get("journal") or "今天你带我出坑逛了长安，我都记在小本本上啦。下回你再来坑里找我，我还认得你。",
         "comment": out.get("comment") or "长安记得你",
         "saved": saved,
     }

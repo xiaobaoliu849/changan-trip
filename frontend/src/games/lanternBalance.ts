@@ -24,6 +24,7 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
   let fallen = 0
   let over = false
   let step = 0 // eased hero offset toward the pressed side
+  let xy = W / 2 - 105 // 小俑 walks alongside, a beat behind the hero
 
   const end = (passed: boolean) => {
     over = true
@@ -53,6 +54,7 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
       t += dt
       const input = (right ? 1 : 0) - (left ? 1 : 0)
       step += (input - step) * Math.min(1, dt * 8)
+      xy += (W / 2 + step * 34 - 105 - xy) * Math.min(1, dt * 4)
       if (fallen > 0) {
         fallen -= dt
         if (fallen <= 0) {
@@ -82,6 +84,9 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
       // The hero steps toward the pressed side, so the controls visibly do something.
       const hx = W / 2 + step * 34
       const hy = H - 120
+      drawSprite(ctx, assets.xiaoyong, xy, hy, 84)
+      // 小俑 calls out the steps now and then.
+      if (t > CALM && fallen <= 0 && t % 4 < 0.9) floatText(ctx, '嘿——哟！', xy, hy - 96, '#ffe9b0', 18)
       drawSprite(ctx, assets.hero, hx, hy, 160)
       // Lantern pole on the hero's head
       const top = hy - 155

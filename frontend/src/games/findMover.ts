@@ -78,10 +78,14 @@ export const findMover: GameFactory = ({ assets, finish }) => {
         ctx.translate(w.x + dx, w.y)
         ctx.rotate(rot)
         ctx.globalAlpha = 0.95
+        // Still clay statues, like in the prologue's pit.
+        ctx.filter = 'grayscale(0.8) sepia(0.4) brightness(0.85)'
         drawSprite(ctx, assets.xiaoyong, 0, 0, w.h)
         ctx.restore()
       })
       drawSprite(ctx, assets.hero, 64, H - 8, 110)
+      // Our 小俑, awake and in full color next to the traveler.
+      drawSprite(ctx, assets.xiaoyong, 150, H - 8, 84)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color)
       hud(ctx, `⏱ ${Math.max(0, Math.ceil(time))}s  找到 ${found}/${ROUNDS}`, `${hearts(3 - wrong)}`)
       if (shown === 0) floatText(ctx, '盯紧了……', W / 2, 140, '#ffe9b0', 24)

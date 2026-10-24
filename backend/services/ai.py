@@ -150,8 +150,41 @@ async def generate_image(prompt: str, aspect: str = "1:1",
     return await _to_data_url(data[0])
 
 
+def agent_platform_url(model: str) -> str:
+    return f"https://aiplatform.googleapis.com/v1/publishers/google/models/{model}:generateContent"
+
+
+async def _agent_platform_pcm(text: str, key: str) -> bytes:
+    # Same model, voice and style, but on Google Agent Platform (Vertex AI): it has a far higher rate
+    # limit than the AI Studio key. Agent Platform takes TTS through generateContent, not Interactions.
+    resp = await _http().post(
+        agent_platform_url(GEMINI_TTS_MODEL),
+        headers={"x-goog-api-key": key},
+        timeout=GEMINI_TTS_TIMEOUT,
+        json={
+            "contents": [{"role": "user", "parts": [{"text": text, "speech_metadata": {"style": GEMINI_TTS_STYLE}}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": GEMINI_TTS_VOICE}}},
+            },
+        },
+    )
+    _check(resp, GEMINI_TTS_MODEL)
+    parts = resp.json()["candidates"][0]["content"]["parts"]
+    audio = [p["inlineData"]["data"] for p in parts if "inlineData" in p]
+    if not audio:
+        raise RuntimeError("Gemini returned no audio")
+    return base64.b64decode(audio[-1])
+
+
 async def gemini_pcm(text: str) -> bytes:
     """Speak exactly ``text`` with Gemini TTS; return raw 24 kHz mono 16-bit PCM."""
+    if agent_key := os.getenv("AGENT_PLATFORM_API_KEY", ""):
+        raw = await _agent_platform_pcm(text, agent_key)
+        if raw[:4] == b"RIFF":
+            with wave.open(io.BytesIO(raw)) as w:
+                raw = w.readframes(w.getnframes())
+        return raw
     key = os.getenv("GEMINI_API_KEY", "")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is not set")

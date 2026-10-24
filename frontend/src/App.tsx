@@ -10,6 +10,7 @@ import {
 import Xiaoyong, { Notebook } from './components/Xiaoyong'
 import Passport from './components/Passport'
 import Credits from './components/Credits'
+import Prologue, { type Met } from './components/Prologue'
 import GameCanvas from './games/GameCanvas'
 import type { Assets, GameFactory } from './games/engine'
 import { catchFood } from './games/catchFood'
@@ -28,16 +29,66 @@ const GAMES: Record<StopId, GameFactory> = {
 
 // Pre-made clips in public/assets/voice/ speak these exact lines; regenerate with `python -m backend.make_voice` (keep LINES there in sync).
 // Bump VOICE_VERSION after regenerating so browsers drop cached old clips.
-const VOICE_VERSION = 4
+const VOICE_VERSION = 7
 const clip = (name: string) => `/assets/voice/vo_${name}.mp3?v=${VOICE_VERSION}`
-const OPENING_LINE = '我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。'
+// Whispered from the pit before the traveler has met 小俑.
+const HOME_LINE = '两千两百年了……今天，会有人带我出去看看吗？'
+const OPENING_LINE = '原来你长这样！我叫小俑，今天跟你出门。你去哪我去哪，我都记小本本上。'
+// 再游一次 when no memory-based greeting could be written: the traveler is back at the pit for 小俑.
+const AGAIN_LINE = '又是你！我在坑里一直等着呢。走，接着带我出去逛！'
+const FINAL_LINE = '大雁塔到了！谢谢你带我出来开眼。天亮前我得回坑里站好，临走前，有啥想对我说的？我记小本本上。'
 const DEFAULT_LINES: Record<StopId, string> = {
-  zhonglou: '这是钟楼，六百多岁，比我年轻多了。跟着钟声敲，可别吵醒全城。',
-  huiminjie: '回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。',
-  bingmayong: '这是我老家！我那帮老战友里，总有一个偷偷动了一下。',
-  chengqiang: '城墙一圈十三点七四公里，骑上车，躲开游客和自拍杆！',
-  datang: '大唐不夜城比我那会儿还亮堂，头顶的灯笼可稳住喽。',
+  zhonglou: '钟楼六百多岁，比我年轻多了。从前钟一响，全城起床。你来敲，我捂耳朵。',
+  huiminjie: '回民街到啦！我是泥做的，吃不了……我点菜，你替我吃！辣子可别碰！',
+  bingmayong: '糟了，我那帮老战友也想溜出来！找出偷偷动的那个，把它按回去。',
+  chengqiang: '城墙是明朝修的，一圈十三点七四公里，比我年轻一千五百多岁。我坐车筐里，你骑！',
+  datang: '大唐不夜城，比我们秦朝的晚上亮多了！你顶着灯笼走，我在旁边给你喊号子。',
 }
+
+// 小俑问你: after each stop 小俑 asks about something modern; tapping an answer is also "next stop".
+// It believes whatever it is told, and the answer goes into its memory for the journal and the next trip.
+// Each question and reply has a pre-made clip: vo_q_<stop>.mp3 and vo_a_<stop>_<answer index>.mp3.
+const QUESTIONS: Record<StopId, { q: string; answers: { say: string; reply: string }[] }> = {
+  bingmayong: {
+    q: '外面的人咋都不穿铠甲？不打仗了？',
+    answers: [
+      { say: '现在太平，不打仗啦', reply: '太平好！那我这身铠甲……就当睡衣穿吧。' },
+      { say: '铠甲在洗衣机里洗呢', reply: '洗衣机？那是啥兵器？我记小本本上了！' },
+    ],
+  },
+  chengqiang: {
+    q: '那些人举着棍子对自己笑，是在施法吗？',
+    answers: [
+      { say: '那叫自拍杆，拍照用的', reply: '自拍杆……我也想要一根！' },
+      { say: '对，长安独门法术', reply: '我就知道！回去教给老战友。' },
+    ],
+  },
+  zhonglou: {
+    q: '现在钟不响了，大家咋知道起床？',
+    answers: [
+      { say: '手机闹钟会叫', reply: '会发光的竹简还会喊人起床？厉害！' },
+      { say: '西安人根本不起床', reply: '那我也不起了，明天睡到晌午！' },
+    ],
+  },
+  huiminjie: {
+    q: '肉夹馍，到底是肉夹馍，还是馍夹肉？',
+    answers: [
+      { say: '是「肉夹于馍」，古汉语', reply: '古汉语？那我是行家，早该听懂的！' },
+      { say: '别问，吃就完了', reply: '有道理！可我是泥做的，只能闻闻。' },
+    ],
+  },
+  datang: {
+    q: '这么亮，晚上谁睡觉啊？',
+    answers: [
+      { say: '灯是给游客看的', reply: '那我今天也是游客啦！头一回当游客。' },
+      { say: '西安人晚上不睡觉', reply: '难怪钟楼的钟退休了！' },
+    ],
+  },
+}
+// After an answer the trip moves on by itself, but only once 小俑's reply has been heard (or, muted,
+// read): at least REPLY_MIN, then the next-stop button fills up for AUTO_GO.
+const REPLY_MIN = 1800
+const AUTO_GO = 1200
 
 const DEFAULT_HERO: Hero = {
   name: '小黄',
@@ -64,16 +115,17 @@ const PLACES: Record<Place, { x: number; y: number; icon: string }> = {
 // Same order as ROUTE in backend/main.py: every run visits all five stops, ending next to 大雁塔.
 const ROUTE: StopId[] = ['bingmayong', 'chengqiang', 'zhonglou', 'huiminjie', 'datang']
 
-const WAIT_LINES = ['我在捏你的泥人……', '我两千年没干过这活了，稍等……', '我在给你上色……快好了！']
+// After the prologue, while the hero is still being drawn: 小俑 is getting a good look at the traveler.
+const WAIT_LINES = ['我揉揉眼睛，好好看看你……', '两千年没见过新面孔，再看一眼……', '嗯……你的样子我记住了，马上好！']
 // 再游一次 keeps the same hero; the wait is 小俑 recalling the last trip, not drawing anyone.
-const RECALL_LINES = ['我翻翻小本本……', '想想你上回在哪摔的跤……', '给你换个新菜单……']
+const RECALL_LINES = ['咦，脚步声……是你回来接我了？', '我翻翻小本本……', '想想你上回在哪摔的跤……']
 const LIVES = 3
 // One-tap things to tell 小俑 at the finish, so nobody has to type on a phone.
-const QUICK_SAYS = ['谢谢你陪我逛长安！', '下次带你去吃泡馍', '城墙我还会回来的', '你可别再把我忘了']
+const QUICK_SAYS = ['下回再带你出来玩！', '下次带你去吃泡馍', '回坑里可别乱动哦', '你可别把我忘了']
 
-type Screen = 'home' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
+type Screen = 'home' | 'prologue' | 'making' | 'greet' | 'intro' | 'play' | 'result' | 'final'
 const SCREEN_MUSIC: Record<Screen, Track> = {
-  home: 'town', making: 'town', greet: 'town', intro: 'town', result: 'town', play: 'game', final: 'finale',
+  home: 'town', prologue: 'town', making: 'town', greet: 'town', intro: 'town', result: 'town', play: 'game', final: 'finale',
 }
 
 export default function App() {
@@ -103,11 +155,18 @@ export default function App() {
   const [endBusy, setEndBusy] = useState(false)
   const [postcard, setPostcard] = useState('')
   const [postcardBusy, setPostcardBusy] = useState(false)
+  // The run's hero and brief are loaded; the trip starts once the prologue (if any) is over too.
+  const [ready, setReady] = useState(false)
+  const [met, setMet] = useState<Met | null>(null)
+  const [answer, setAnswer] = useState<number | null>(null)
+  const [replyDone, setReplyDone] = useState(false)
+  const answerTimer = useRef(0)
+  // Which answer's reply is still playing (`${runId}:${step}`), so a late reply can't move the trip on.
+  const pendingReply = useRef('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const route = brief?.route ?? []
   const stop = route[step]
-  const firstVisit = true
 
   useEffect(() => {
     if (screen === 'home') resetPlayer()
@@ -133,17 +192,22 @@ export default function App() {
     return () => clearInterval(id)
   }, [screen])
 
+  // Only the latest line clears "speaking": a line that a newer one cut off ends while the newer one plays.
+  const lineNo = useRef(0)
+
   const say = async (src: string | Promise<string>) => {
+    const no = ++lineNo.current
     setSpeaking(true)
     try {
       await playVoice(await src)
     } catch {
       /* voice is a bonus; text is always shown */
     }
-    setSpeaking(false)
+    if (no === lineNo.current) setSpeaking(false)
   }
 
   const sayText = async (line: string) => {
+    const no = ++lineNo.current
     const ticket = voiceTicket()
     setSpeaking(true)
     try {
@@ -152,8 +216,12 @@ export default function App() {
     } catch {
       if (ticket === voiceTicket()) await speakBrowser(line)
     }
-    setSpeaking(false)
+    if (no === lineNo.current) setSpeaking(false)
   }
+
+  // The pre-made clip only when it says exactly what is on screen.
+  const sayGreeting = (greeting: string) =>
+    greeting === OPENING_LINE ? say(clip('opening')) : greeting === AGAIN_LINE ? say(clip('again')) : sayText(greeting)
 
   const startRun = async (h: Hero, rawSprite: string) => {
     const no = nextRunNo()
@@ -170,7 +238,7 @@ export default function App() {
     const [cut, b] = await Promise.all([
       cutOutWhite(rawSprite),
       api.brief(h, no).catch((): Brief => ({
-        greeting: OPENING_LINE,
+        greeting: no > 1 ? AGAIN_LINE : OPENING_LINE,
         recalled: [], route: ROUTE,
         food_order: ['roujiamo', 'biangbiang', 'liangpi'], spicy_tease: false, wall_warn: '',
         stop_lines: {}, memory_source: 'none',
@@ -179,17 +247,31 @@ export default function App() {
     setHero(h)
     setSprite(cut)
     setBrief(b)
-    setScreen('greet')
-    // The pre-made clip only when it says exactly what is on screen.
-    if (b.greeting === OPENING_LINE) say(clip('opening'))
-    else sayText(b.greeting)
+    setReady(true)
   }
+
+  // Show the run once it is loaded and nothing is in front of it (the prologue hands over to 'making').
+  useEffect(() => {
+    if (!ready || screen !== 'making' || !brief || !hero) return
+    setScreen('greet')
+    if (met) {
+      const line = `${hero.name}在兵马俑坑里第一个发现小俑会动，${met === 'talk' ? '吓了一跳：「你会说话？！」，然后' : '二话不说就'}答应带小俑出去逛长安`
+      pushLocalLog(line)
+      api.note(runId, line, 'user').catch(() => undefined)
+      setMet(null)
+    }
+    sayGreeting(brief.greeting)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, screen])
 
   const create = async (useDefault = false) => {
     setError('')
     resetPlayer()
     setLastStamps(null)
-    setScreen('making')
+    setReady(false)
+    setMet(null)
+    // A new traveler meets 小俑 in the pit while their hero is drawn.
+    setScreen('prologue')
     try {
       if (useDefault) {
         await startRun(DEFAULT_HERO, '/assets/img/default_hero.jpg')
@@ -206,6 +288,7 @@ export default function App() {
   const replay = async () => {
     if (!hero) return
     setLastStamps(stamps)
+    setReady(false)
     setScreen('making')
     stopVoice()
     await startRun(hero, sprite)
@@ -229,16 +312,47 @@ export default function App() {
     if (!stop || !hero) return
     setResult(r)
     if (r.snapshot && (r.passed || !snapshot)) setSnapshot(r.snapshot)
-    const line = `${STOPS[stop].name}：${r.detail}`
+    // Game summaries call the player 你; memory is told in the third person, so name them.
+    const line = `${STOPS[stop].name}：${r.detail.split('你').join(hero.name)}`
     setLog((l) => [...l, line])
-    pushLocalLog(`第${runNo}次游西安，${hero.name}在${line}`)
+    pushLocalLog(`第${runNo}次游西安，${hero.name}带小俑到了${line}`)
     if (r.passed) setStamps((s) => [...s, stop])
     else setLives((n) => n - 1)
     api.stop(runId, runNo, hero, stop, r).catch(() => undefined)
+    setAnswer(null)
+    setReplyDone(false)
     setScreen('result')
+    say(clip(`q_${stop}`))
   }
 
+  const answerQuestion = (i: number) => {
+    if (!stop || !hero || answer !== null) return
+    const q = QUESTIONS[stop]
+    setAnswer(i)
+    const line = `在${STOPS[stop].name}，小俑问「${q.q}」，${hero.name}教它：「${q.answers[i].say}」`
+    setLog((l) => [...l, line])
+    pushLocalLog(`第${runNo}次游西安，${line}`)
+    api.note(runId, `第${runNo}次游西安，${line}`, 'user').catch(() => undefined)
+    const key = `${runId}:${step}`
+    pendingReply.current = key
+    Promise.all([say(clip(`a_${stop}_${i}`)), new Promise((r) => setTimeout(r, REPLY_MIN))]).then(() => {
+      // Skip if the player already moved on, or went back to 首页.
+      if (pendingReply.current !== key) return
+      setReplyDone(true)
+      answerTimer.current = window.setTimeout(next, AUTO_GO)
+    })
+  }
+
+  // Leaving the result screen any other way (首页, or tapping on) cancels the automatic move on.
+  useEffect(() => {
+    if (screen === 'result') return
+    clearTimeout(answerTimer.current)
+    pendingReply.current = ''
+  }, [screen])
+
   const next = () => {
+    clearTimeout(answerTimer.current)
+    pendingReply.current = ''
     const out = lives <= 0 || step + 1 >= route.length
     if (out) {
       setScreen('final')
@@ -264,7 +378,7 @@ export default function App() {
       setEnding(r)
       sayText(r.journal)
     } catch {
-      setEnding({ journal: '今天我陪你逛了长安，都记在小本本上啦。下回你来，我还认得你。', comment: '长安记得你' })
+      setEnding({ journal: '今天你带我出坑逛了长安，我都记在小本本上啦。下回你再来坑里找我，我还认得你。', comment: '长安记得你' })
     }
     setEndBusy(false)
   }
@@ -315,11 +429,7 @@ export default function App() {
     setScreen('home')
   }
 
-  const homeLine = firstVisit
-    ? '我在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉我。'
-    : '咦，你好像来过？我翻翻小本本……先告诉我你今天长啥样。'
-  // The first-visit line is pre-made (vo_home.mp3) so it starts instantly.
-  const sayHome = () => (firstVisit ? say(clip('home')) : sayText(homeLine))
+  const sayHome = () => say(clip('home'))
 
   // Browsers allow sound only after the first tap or key press: greet right away when that has
   // already happened (e.g. back from 首页), otherwise on that first touch.
@@ -335,7 +445,7 @@ export default function App() {
       started = true
       off()
       // A tap on the bubble plays the line through the bubble's own handler.
-      if (e?.target instanceof Element && e.target.closest('.bubble')) return
+      if (e?.target instanceof Element && e.target.closest('.bubble, .home-scene')) return
       sayHome()
     }
     if (navigator.userActivation?.hasBeenActive) greet()
@@ -374,7 +484,7 @@ export default function App() {
         )}
       </button>
 
-      {screen !== 'home' && screen !== 'making' && (
+      {screen !== 'home' && screen !== 'prologue' && screen !== 'making' && (
         <button type="button" className="back" onClick={goHome} aria-label="回到首页" title="回到首页，重新开始">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" />
@@ -387,19 +497,27 @@ export default function App() {
         <div className="screen home">
           <h1>
             长安记得你
-            <small>陪一个健忘的兵马俑逛西安</small>
+            <small>带一个刚醒的兵马俑逛西安</small>
           </h1>
-          <Xiaoyong
-            mood={firstVisit ? 'confused' : 'happy'}
-            speaking={speaking}
-            onPlay={() => playWithUnmute(sayHome)}
-            onStop={handleStopVoice}
-            text={homeLine}
-          />
+          {/* The traveler's view: 小俑 is still just a statue in the pit, whispering. */}
+          <button
+            type="button"
+            className={`home-scene${speaking ? ' is-speaking' : ''}`}
+            onClick={() => (speaking ? handleStopVoice() : playWithUnmute(sayHome))}
+          >
+            <img className="hs-statue" src="/assets/img/xiaoyong.png" alt="" draggable={false} />
+            <span className="hs-text">
+              <b>🎫 你来西安旅游，第一站：兵马俑</b>
+              <span className="hs-whisper">
+                坑里好像有谁在小声嘀咕：「{HOME_LINE}」
+                <i>{speaking ? '🔊' : '▶ 听'}</i>
+              </span>
+            </span>
+          </button>
           <div className="card">
             <div className="card-head">
-              <label>一句话描述你的旅行主角</label>
-              <span className="route-hint">闯 5 站集章 → 🏁 终点大雁塔</span>
+              <label>先说说，你是个什么样的旅人？</label>
+              <span className="route-hint">带小俑闯 5 站 → 🏁 大雁塔</span>
             </div>
             <textarea
               value={text}
@@ -449,6 +567,18 @@ export default function App() {
         </div>
       )}
 
+      {screen === 'prologue' && (
+        <Prologue
+          speaking={speaking}
+          say={(name) => say(clip(name))}
+          onStop={handleStopVoice}
+          onDone={(m) => {
+            setMet(m)
+            setScreen('making')
+          }}
+        />
+      )}
+
       {screen === 'making' && (
         <div className="screen center">
           {lastStamps && hero ? (
@@ -464,7 +594,7 @@ export default function App() {
             </>
           ) : (
             <>
-              <img className="spin" src="/assets/img/xiaoyong_confused.png" alt="" />
+              <img className="spin" src="/assets/img/xiaoyong_happy.png" alt="" />
               <p className="wait">{WAIT_LINES[waitLine]}</p>
             </>
           )}
@@ -473,7 +603,7 @@ export default function App() {
 
       {screen === 'greet' && hero && brief && step === 0 && (
         <div className="screen greet">
-          <div className="greet-head">第 {runNo} 次入城 · 今日行程</div>
+          <div className="greet-head">第 {runNo} 次带小俑出门 · 今日行程</div>
           <div className="hero-card">
             <img src={sprite} alt={hero.name} />
             <div className="hero-info">
@@ -491,15 +621,10 @@ export default function App() {
             </div>
           </div>
           <Xiaoyong
-            mood={brief.recalled.length ? 'happy' : 'confused'}
+            mood="happy"
             text={brief.greeting}
             speaking={speaking}
-            onPlay={() =>
-              playWithUnmute(() => {
-                if (brief.greeting === OPENING_LINE) say(clip('opening'))
-                else sayText(brief.greeting)
-              })
-            }
+            onPlay={() => playWithUnmute(() => sayGreeting(brief.greeting))}
             onStop={handleStopVoice}
           />
           <Notebook items={brief.recalled} source={brief.memory_source} />
@@ -548,7 +673,7 @@ export default function App() {
                 ? lastStamps.length >= route.length
                   ? `上次 ${route.length} 个章全集齐了，这次冲个全程不掉血！`
                   : `上次集了 ${lastStamps.length}/${route.length} 个章，这次把「补章」的拿下！`
-                : `闯 ${route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）`}
+                : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔（曲江京东MALL旁）`}
             </p>
           </div>
           <div className="cta">
@@ -563,7 +688,7 @@ export default function App() {
         <div className="screen intro" style={{ backgroundImage: `url(/assets/img/bg_${stop}.jpg)` }}>
           <div className="intro-inner">
             <div className="stop-tag">
-              第 {step + 1} 站 · {STOPS[stop].name}
+              第 {step + 1} 站 · 你带小俑来到{STOPS[stop].name}
             </div>
             <Xiaoyong
               text={brief?.stop_lines[stop] || DEFAULT_LINES[stop]}
@@ -582,13 +707,8 @@ export default function App() {
               <p>{STOPS[stop].hint}</p>
               <p className="lives">体力 {'❤️'.repeat(lives)}</p>
             </div>
-            <button
-              className="btn big"
-              onClick={() => {
-                stopVoice()
-                setScreen('play')
-              }}
-            >
+            {/* 小俑 keeps talking into the game instead of being cut off mid-sentence. */}
+            <button className="btn big" onClick={() => setScreen('play')}>
               开始！
             </button>
           </div>
@@ -613,9 +733,38 @@ export default function App() {
           <p className="detail">{result.detail}</p>
           <p className="saved">📒 小俑记下了</p>
           {!result.passed && <p className="lives">体力 {'❤️'.repeat(Math.max(0, lives))}</p>}
-          <button className="btn big" onClick={next}>
-            {lives <= 0 ? '体力用完了，赶末班地铁去大雁塔 →' : step + 1 >= route.length ? '去终点大雁塔 →' : `下一站：${STOPS[route[step + 1]].name} →`}
-          </button>
+          <div className="ask">
+            <div className="ask-tag">小俑问你</div>
+            <Xiaoyong
+              mood={answer === null ? 'confused' : 'happy'}
+              text={answer === null ? QUESTIONS[stop].q : QUESTIONS[stop].answers[answer].reply}
+              speaking={speaking}
+              onPlay={() => playWithUnmute(() => say(clip(answer === null ? `q_${stop}` : `a_${stop}_${answer}`)))}
+              onStop={handleStopVoice}
+            />
+            {answer === null ? (
+              <>
+                <div className="answers">
+                  {QUESTIONS[stop].answers.map((a, i) => (
+                    <button key={a.say} type="button" className="btn ghost" onClick={() => answerQuestion(i)}>
+                      {a.say}
+                    </button>
+                  ))}
+                </div>
+                <p className="ask-note">
+                  答完就出发 · {lives <= 0 ? '体力用完了，直奔大雁塔' : step + 1 >= route.length ? '去终点大雁塔' : `下一站：${STOPS[route[step + 1]].name}`}
+                </p>
+              </>
+            ) : (
+              <button
+                className={replyDone ? 'btn big auto' : 'btn big'}
+                style={{ animationDuration: `${AUTO_GO}ms` }}
+                onClick={next}
+              >
+                {lives <= 0 ? '体力用完了，赶末班地铁去大雁塔 →' : step + 1 >= route.length ? '去终点大雁塔 →' : `下一站：${STOPS[route[step + 1]].name} →`}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -625,8 +774,9 @@ export default function App() {
             <div className="final-hero">
               <img className="fh-bg" src="/assets/img/bg_dayanta.jpg" alt="大雁塔" />
               <img className="fh-me" src={sprite} alt={hero.name} />
+              <img className="fh-xy" src="/assets/img/xiaoyong_happy.png" alt="小俑" />
               <div className="fh-title">
-                <small>第 {runNo} 次入城 · 抵达终点</small>
+                <small>第 {runNo} 次带小俑出门 · 抵达终点</small>
                 <h2>大雁塔</h2>
               </div>
             </div>
@@ -655,7 +805,7 @@ export default function App() {
                   speaking={speaking}
                   onPlay={() => playWithUnmute(() => say(clip('dayanta')))}
                   onStop={handleStopVoice}
-                  text="大雁塔到了，咱今天这趟没白走。临走前，有啥想对我说的？我记小本本上，下回你来，我还认得你。"
+                  text={FINAL_LINE}
                 />
                 <div className="card say-card">
                   <b className="say-title">📒 临走前，对小俑说一句</b>
@@ -707,7 +857,7 @@ export default function App() {
                 <div className="row">
                   <button className="btn big replay" onClick={replay}>
                     再游一次
-                    <small>小俑会记得你</small>
+                    <small>再去坑里接小俑，它记得你</small>
                   </button>
                   <button
                     className="btn ghost"

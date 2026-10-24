@@ -29,7 +29,7 @@ export interface StopResult {
 
 export const STOPS: Record<StopId, { name: string; stamp: string; hint: string }> = {
   zhonglou: { name: '钟楼', stamp: '晨钟', hint: '音符飞到铜钟时点击 / 按空格敲钟，敲错或漏敲 3 次就失败' },
-  huiminjie: { name: '回民街', stamp: '吃货', hint: '←→ 或拖动接住客人点的美食，每样接 3 份，接到 3 个辣子就辣晕了' },
+  huiminjie: { name: '回民街', stamp: '吃货', hint: '←→ 或拖动接住小俑点的美食替它吃，每样 3 份，接到 3 个辣子就辣晕了' },
   bingmayong: { name: '兵马俑', stamp: '战友', hint: '盯紧！有个俑会偷偷动一下，点中它。找到 3 次过关，点错 3 次失败' },
   chengqiang: { name: '城墙', stamp: '骑士', hint: '点击屏幕 / 按空格跳起来，躲开游客和自拍杆，撞 3 次失败' },
   datang: { name: '大唐不夜城', stamp: '灯会', hint: '灯笼往哪边歪，就按住哪边把它扶正（←→ 键，或按住屏幕左右半边）。前 3 秒是热身，坚持 30 秒走完步行街，掉 3 次失败' },
@@ -134,6 +134,8 @@ export const api = {
     post<{ journal: string; comment: string; saved: boolean }>('run_end', {
       player_id: playerId(), run_id: runId, run_no: runNo, hero, stamps, log, said,
     }),
+  note: (runId: string, text: string, role: 'assistant' | 'user' = 'assistant') =>
+    post<{ saved: boolean }>('note', { player_id: playerId(), run_id: runId, text, role }),
   tts: (text: string) => post<{ audio: string }>('tts', { text }),
   postcard: (hero: Hero, sprite: string) => post<{ image: string }>('postcard', { hero, sprite }),
 }

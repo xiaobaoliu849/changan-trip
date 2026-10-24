@@ -157,7 +157,22 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
         ctx.lineTo(PX + 36, py - 24)
         ctx.stroke()
         drawSprite(ctx, assets.hero, PX, py - 40, 140)
+        // 小俑 rides in a wicker basket over the front wheel.
+        drawSprite(ctx, assets.xiaoyong, PX + 56, py - 52, 58)
+        ctx.fillStyle = '#a8743f'
+        roundRect(ctx, PX + 34, py - 70, 44, 22, 5)
+        ctx.fill()
+        ctx.strokeStyle = '#5e3b1c'
+        ctx.lineWidth = 2
+        ctx.stroke()
+        ctx.beginPath()
+        for (let k = 1; k < 4; k++) {
+          ctx.moveTo(PX + 34 + k * 11, py - 68)
+          ctx.lineTo(PX + 34 + k * 11, py - 50)
+        }
+        ctx.stroke()
       }
+      if (invuln > 0.5) floatText(ctx, '哎哟！', PX + 56, py - 118, '#ff8a65', 18)
       const km = Math.min(TOTAL_KM, (t / TIME) * TOTAL_KM)
       hud(ctx, `🚲 ${km.toFixed(1)} / ${TOTAL_KM} km  第${segment()}段`, hearts(3 - hits.length))
       // A road map of the lap along the bottom: three segments, a bike marker and the finish flag.
