@@ -224,6 +224,17 @@ textarea {
   padding: 15px 20px;
 }
 
+.btn.replay {
+  padding: 10px 16px;
+}
+
+.btn.replay small {
+  display: block;
+  font-size: 12px;
+  font-weight: normal;
+  opacity: 0.85;
+}
+
 .btn.ghost {
   background: #fff;
   color: var(--red);
@@ -257,6 +268,36 @@ textarea {
   height: 72px;
   object-fit: cover;
   border-radius: 10px;
+}
+
+.photo-picked {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(47, 122, 100, 0.08);
+  border: 1.5px dashed rgba(47, 122, 100, 0.4);
+}
+
+.photo-picked > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.photo-picked b {
+  color: var(--jade);
+  font-size: 15px;
+}
+
+.paste-tip {
+  margin: -2px 0 0;
+  font-size: 12px;
+  color: #8a5a2b;
+  opacity: 0.8;
 }
 
 /* 小俑 */
@@ -311,6 +352,13 @@ textarea {
 .bubble b {
   color: var(--red);
   font-size: 13px;
+}
+
+.listen {
+  font-size: 11px;
+  color: var(--red);
+  opacity: 0.7;
+  margin-left: auto;
 }
 
 .eq-bars {

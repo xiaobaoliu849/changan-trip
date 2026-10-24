@@ -20,6 +20,7 @@ from . import main  # noqa: F401 - loads .env
 from .services import ai
 
 LINES = {
+    "home": "我在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉我。",
     "opening": "我叫小俑，第一次出坑！你是谁呀？没事，我会记住你的。",
     "zhonglou": "这是钟楼，六百多岁，比我年轻多了。跟着钟声敲，可别吵醒全城。",
     "huiminjie": "回民街到啦！客人点啥你就接啥，接到辣子赶紧喝水。",

@@ -105,6 +105,19 @@ export default function App() {
     playMusic(SCREEN_MUSIC[screen])
   }, [screen])
 
+  // Ctrl+V a copied image anywhere on the home screen to use it as the photo.
+  useEffect(() => {
+    if (screen !== 'home') return
+    const onPaste = async (e: ClipboardEvent) => {
+      const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'))
+      if (!file) return
+      e.preventDefault()
+      setPhoto(await fileToBase64(file))
+    }
+    addEventListener('paste', onPaste)
+    return () => removeEventListener('paste', onPaste)
+  }, [screen])
+
   useEffect(() => {
     if (screen !== 'making') return
     const id = setInterval(() => setWaitLine((n) => (n + 1) % WAIT_LINES.length), 2500)
@@ -294,6 +307,37 @@ export default function App() {
   const homeLine = firstVisit
     ? '我在坑里站了两千两百年，今天第一次出门！你是谁呀？用一句话告诉我。'
     : '咦，你好像来过？我翻翻小本本……先告诉我你今天长啥样。'
+  // The first-visit line is pre-made (vo_home.mp3) so it starts instantly.
+  const sayHome = () => (firstVisit ? say(clip('home')) : sayText(homeLine))
+
+  // Browsers allow sound only after the first tap or key press: greet right away when that has
+  // already happened (e.g. back from 首页), otherwise on that first touch.
+  useEffect(() => {
+    if (screen !== 'home') return
+    let started = false
+    const off = () => {
+      removeEventListener('pointerdown', greet)
+      removeEventListener('keydown', greet)
+    }
+    function greet(e?: Event) {
+      if (started) return
+      started = true
+      off()
+      // A tap on the bubble plays the line through the bubble's own handler.
+      if (e?.target instanceof Element && e.target.closest('.bubble')) return
+      sayHome()
+    }
+    if (navigator.userActivation?.hasBeenActive) greet()
+    else {
+      addEventListener('pointerdown', greet)
+      addEventListener('keydown', greet)
+    }
+    return () => {
+      off()
+      if (started) stopVoice()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen])
 
   return (
     <div className="app">
@@ -337,7 +381,7 @@ export default function App() {
           <Xiaoyong
             mood={firstVisit ? 'confused' : 'happy'}
             speaking={speaking}
-            onPlay={() => playWithUnmute(() => sayText(homeLine))}
+            onPlay={() => playWithUnmute(sayHome)}
             onStop={handleStopVoice}
             text={homeLine}
           />
@@ -363,6 +407,7 @@ export default function App() {
                 hidden
                 onChange={async (e) => {
                   const f = e.target.files?.[0]
+                  e.target.value = '' // so picking the same file again still fires
                   if (f) setPhoto(await fileToBase64(f))
                 }}
               />
@@ -370,7 +415,20 @@ export default function App() {
                 出发 →
               </button>
             </div>
-            {photo && <img className="thumb" src={photo.url} alt="照片" />}
+            {photo ? (
+              <div className="photo-picked">
+                <img className="thumb" src={photo.url} alt="照片" />
+                <div>
+                  <b>✓ 照片已选好</b>
+                  <span>点「出发」把它画成 Q 版主角（约 1 分钟）</span>
+                </div>
+                <button className="link" onClick={() => setPhoto(null)}>
+                  移除
+                </button>
+              </div>
+            ) : (
+              <p className="paste-tip">💡 复制了图片？直接按 Ctrl+V 粘贴进来</p>
+            )}
             <button className="btn quick-play" onClick={() => create(true)}>
               ⚡ 懒得想？用默认主角「小黄」秒开玩 →
             </button>
@@ -581,8 +639,9 @@ export default function App() {
                   )}
                 </div>
                 <div className="row">
-                  <button className="btn big" onClick={replay}>
-                    再游一次（小俑会记得这次）
+                  <button className="btn big replay" onClick={replay}>
+                    再游一次
+                    <small>小俑会记得你</small>
                   </button>
                   <button
                     className="btn ghost"
