@@ -748,6 +748,19 @@ textarea {
   border-radius: 999px;
 }
 
+.evermind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  border: 1px solid rgba(109, 40, 217, 0.3);
+  color: #5b21b6;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+}
+
 /* 3-step onboarding strip */
 .onboard-steps {
   display: flex;

@@ -299,7 +299,20 @@ export default function App() {
       {screen === 'home' && (
         <div className="screen home">
           <div className="event-header">
-            <span className="event-badge">WaytoAGI 1024 切磋大会 · 游戏赛道</span>
+            <span className="event-badge">WaytoAGI 1024 · 游戏赛道</span>
+            <span className="evermind-badge" title="Powered by EverMind EverOS">
+              <svg viewBox="0 0 20 20" width="13" height="13" fill="none" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="17" height="17" rx="4.5" fill="#6d28d9" />
+                <path
+                  d="M6.2 10c0-1.6 1.1-2.7 2.4-2.7 1 0 1.8.6 2.4 1.6.6-1 1.4-1.6 2.4-1.6 1.3 0 2.4 1.1 2.4 2.7s-1.1 2.7-2.4 2.7c-1 0-1.8-.6-2.4-1.6-.6 1-1.4 1.6-2.4 1.6-1.3 0-2.4-1.1-2.4-2.7z"
+                  stroke="#fff"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              EverMind
+            </span>
             <span className="venue-badge">📍 西安曲江京东MALL</span>
           </div>
           <h1>

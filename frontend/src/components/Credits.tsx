@@ -9,6 +9,29 @@ interface Partner {
 
 const PARTNERS: Partner[] = [
   {
+    id: 'evermind',
+    name: 'EverMind · EverOS',
+    accent: '#6d28d9',
+    icon: (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none">
+        <rect x="1.5" y="1.5" width="17" height="17" rx="4.5" fill="url(#em-grad)" />
+        <path
+          d="M6.2 10c0-1.6 1.1-2.7 2.4-2.7 1 0 1.8.6 2.4 1.6.6-1 1.4-1.6 2.4-1.6 1.3 0 2.4 1.1 2.4 2.7s-1.1 2.7-2.4 2.7c-1 0-1.8-.6-2.4-1.6-.6 1-1.4 1.6-2.4 1.6-1.3 0-2.4-1.1-2.4-2.7z"
+          stroke="#fff"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <defs>
+          <linearGradient id="em-grad" x1="2" y1="2" x2="18" y2="18" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#7c3aed" />
+            <stop offset="1" stopColor="#4f46e5" />
+          </linearGradient>
+        </defs>
+      </svg>
+    ),
+  },
+  {
     id: 'jd',
     name: '京东 · 曲江京东MALL',
     accent: '#e1251b',
@@ -128,7 +151,7 @@ export default function Credits() {
         <span>WaytoAGI 全国 1024 切磋大会 · 游戏赛道作品</span>
       </div>
       <div className="cr-venue">
-        📍 西安主会场：<b>西安曲江京东MALL</b>（大雁塔旁）
+        📍 西安主会场：<b>西安曲江京东MALL</b>（雁塔区曲江路618号 · 大雁塔商圈）
       </div>
       <div className="cr-label">赛事赞助商与合作伙伴（排名不分先后）</div>
       <div className="cr-row">
@@ -136,7 +159,7 @@ export default function Credits() {
           <PartnerBadge key={p.id} {...p} />
         ))}
       </div>
-      <div className="cr-tech">长期记忆 by EverOS · 生图与智能 by OpenAI Next &amp; Gemini</div>
+      <div className="cr-tech">长期记忆引擎 Powered by EverMind (EverOS) · 生图与智能 by OpenAI Next &amp; Gemini</div>
     </footer>
   )
 }
