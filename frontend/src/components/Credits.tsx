@@ -29,10 +29,10 @@ export default function Credits() {
       <div className="cr-powered">
         <span className="evermind-pill" title="EverMind · EverOS">
           <img className="evermind-mark" src="/assets/brand/evermind-gold.svg" alt="EverMind" />
-          <span>长期记忆引擎 <b>EverMind</b> (EverOS)</span>
+          <span>长期记忆 <b>EverMind</b></span>
         </span>
         <span className="cr-dot">·</span>
-        <span className="cr-tech">AI 生图与智能 by OpenAI Next</span>
+        <span className="cr-tech">AI 算力支持 OpenDev</span>
       </div>
     </footer>
   )
