@@ -18,8 +18,9 @@ TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-3.5-flash")
 IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 TTS_MODEL = os.getenv("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
 TTS_VOICE = os.getenv("GEMINI_TTS_VOICE", "Puck")
-# Style prefix that gives 小俑 his voice; matches the pre-generated intros.
-TTS_STYLE = "用憨厚、慢吞吞、有点自豪的老爷爷语气说："
+# 小俑's delivery. Sent as speech_metadata, never inside the text, or the model reads it aloud.
+TTS_STYLE = "憨厚、慢吞吞、有点自豪的老爷爷语气"
+INTERACTIONS = "https://generativelanguage.googleapis.com/v1beta/interactions"
 
 _client: httpx.AsyncClient | None = None
 
@@ -93,24 +94,37 @@ async def generate_image(prompt: str, aspect: str = "1:1", ref_b64: str | None =
 
 async def tts(text: str) -> str:
     """Speak ``text`` in 小俑's voice; return a WAV data URL."""
-    data = await _generate(TTS_MODEL, {
-        "contents": [{"parts": [{"text": TTS_STYLE + text}]}],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": TTS_VOICE}}},
+    resp = await _http().post(
+        INTERACTIONS,
+        headers={"x-goog-api-key": _key(), "Content-Type": "application/json"},
+        json={
+            "model": TTS_MODEL,
+            "input": [{
+                "type": "user_input",
+                "content": [{
+                    "type": "text",
+                    "text": text,
+                    "annotations": [{"type": "speech_metadata", "style": TTS_STYLE}],
+                }],
+            }],
+            "response_format": {"type": "audio"},
+            "generation_config": {"speech_config": [{"voice": TTS_VOICE}]},
         },
-    })
-    for p in _parts(data):
-        if "inlineData" in p:
-            raw = base64.b64decode(p["inlineData"]["data"])
-            if raw[:4] != b"RIFF":
-                # Streaming-style raw PCM: 24 kHz mono 16-bit.
-                buf = io.BytesIO()
-                with wave.open(buf, "wb") as w:
-                    w.setnchannels(1)
-                    w.setsampwidth(2)
-                    w.setframerate(24000)
-                    w.writeframes(raw)
-                raw = buf.getvalue()
-            return "data:audio/wav;base64," + base64.b64encode(raw).decode()
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"Gemini TTS {resp.status_code}: {resp.text[:300]}")
+    for step in resp.json().get("steps", []):
+        for item in step.get("content") or []:
+            if item.get("data"):
+                raw = base64.b64decode(item["data"])
+                if raw[:4] != b"RIFF":
+                    # Headerless PCM: 24 kHz mono 16-bit.
+                    buf = io.BytesIO()
+                    with wave.open(buf, "wb") as w:
+                        w.setnchannels(1)
+                        w.setsampwidth(2)
+                        w.setframerate(24000)
+                        w.writeframes(raw)
+                    raw = buf.getvalue()
+                return "data:audio/wav;base64," + base64.b64encode(raw).decode()
     raise RuntimeError("Gemini returned no audio")
