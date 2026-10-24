@@ -718,159 +718,34 @@ textarea {
   border-radius: 10px;
 }
 
-/* event & venue badges */
-.event-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding-right: 36px;
-}
-
-.event-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--night);
-  color: #ffe9b0;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px 3px 6px;
-  border-radius: 999px;
-  letter-spacing: 0.5px;
-}
-
-.badge-logo {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.venue-badge {
-  background: linear-gradient(135deg, #fff5e0 0%, #f7dfb3 100%);
-  border: 1px solid rgba(184, 50, 42, 0.3);
-  color: var(--red);
-  font-size: 12px;
-  font-weight: bold;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
-
-.evermind-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #fffaf0;
-  border: 1px solid #e6c670;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px 3px 5px;
-  border-radius: 999px;
-}
-
-/* 3-step onboarding strip */
-.onboard-steps {
+.card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  background: #fffaf0;
-  border: 1.5px solid var(--paper-2);
-  border-radius: 14px;
-  padding: 8px 10px;
-}
-
-.ob-step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.ob-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--paper-2);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.ob-step.ob-final .ob-num {
-  background: rgba(184, 50, 42, 0.12);
-}
-
-.ob-step b {
-  display: block;
-  font-size: 12.5px;
-  color: var(--ink);
-  line-height: 1.2;
-}
-
-.ob-step.ob-final b {
-  color: var(--red);
-}
-
-.ob-step small {
-  display: block;
-  font-size: 10.5px;
-  opacity: 0.72;
-  white-space: nowrap;
-}
-
-.ob-arrow {
-  color: #b89f7d;
-  font-weight: bold;
-  font-size: 13px;
-}
-
-/* quick start button & divider */
-.btn.fast-start {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #c93b31 0%, var(--red) 100%);
-  padding: 13px 16px;
-  font-size: 15.5px;
+  flex-wrap: wrap;
 }
 
-.fast-badge {
-  background: #ffe082;
-  color: #5c1912;
-  font-size: 11.5px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 999px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: #8c7355;
+.route-hint {
   font-size: 12px;
-  margin: 2px 0;
+  color: var(--red);
+  background: rgba(184, 50, 42, 0.08);
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px dashed #dfcfa8;
+.btn.quick-play {
+  background: linear-gradient(135deg, #fff5dc 0%, #f6dfad 100%);
+  color: var(--ink);
+  border: 1.5px solid #dcb86c;
+  box-shadow: 0 2px 0 #c9a252;
+  padding: 10px 14px;
+  font-size: 14px;
 }
 
-.divider span {
-  padding: 0 8px;
+.btn.quick-play:hover {
+  background: linear-gradient(135deg, #fff0cc 0%, #f3d696 100%);
 }
 
 /* final destination pill on map route */
@@ -918,24 +793,25 @@ textarea {
   gap: 6px;
   font-weight: bold;
   color: var(--ink);
+  flex-wrap: wrap;
 }
 
 .cr-waytoagi {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
 
 .cr-venue {
   color: var(--red);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .cr-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -943,38 +819,36 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  height: 32px;
+  gap: 4px;
+  height: 28px;
   background: #ffffff;
   border: 1px solid #eadbc0;
-  border-radius: 8px;
-  padding: 4px 10px;
-  box-shadow: 0 1px 3px rgba(59, 36, 18, 0.05);
+  border-radius: 7px;
+  padding: 3px 8px;
 }
 
 .evermind-card {
-  font-size: 12.5px;
+  font-size: 12px;
   color: #1f160f;
-  letter-spacing: 0.2px;
 }
 
 .evermind-mark {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
   object-fit: contain;
 }
 
 .mark {
-  height: 20px;
-  max-width: 92px;
+  height: 17px;
+  max-width: 80px;
   object-fit: contain;
 }
 
 .cr-label,
 .cr-tech {
-  opacity: 0.78;
-  font-size: 11.5px;
+  opacity: 0.72;
+  font-size: 11px;
 }
 
 .pp-event {
