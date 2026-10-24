@@ -1665,7 +1665,9 @@ textarea {
   align-items: flex-start;
   gap: 10px;
   margin-top: 14px;
-  padding: 10px 84px 4px 0;
+  padding: 10px 92px 4px 0;
+  /* Tall enough to hold the tilted seal, so it neither crosses the rule above nor runs into the footer. */
+  min-height: 96px;
   border-top: 1px dashed rgba(138, 90, 43, 0.45);
 }
 
@@ -1697,8 +1699,8 @@ textarea {
 /* The office's big square seal, stamped over the note. */
 .pp-bigseal {
   position: absolute;
-  right: 4px;
-  top: 8px;
+  right: 6px;
+  top: 13px;
   width: 70px;
   height: 70px;
   display: grid;

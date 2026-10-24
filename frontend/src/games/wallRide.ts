@@ -133,9 +133,9 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
         ctx.textAlign = 'center'
         ctx.fillText(EMOJI[o.kind], o.x, GROUND + 6)
       }
-      // Hero on a bike
+      // Hero on a bike, blinking after a hit — but never missing from the passport photo.
       const py = GROUND + y
-      if (invuln === 0 || Math.floor(invuln * 10) % 2 === 0) {
+      if (photoMode || invuln === 0 || Math.floor(invuln * 10) % 2 === 0) {
         ctx.strokeStyle = '#2d1a0e'
         ctx.lineWidth = 6
         ctx.lineCap = 'round'
