@@ -1,9 +1,15 @@
 let current: HTMLAudioElement | null = null
+let endCurrent: (() => void) | null = null
 let muted = false
+// Bumped by stopVoice(); a line whose audio arrives after that (TTS takes ~3 s) is dropped
+// instead of playing over the next screen.
+let voiceEpoch = 0
+export const voiceTicket = () => voiceEpoch
 
 export function setMuted(m: boolean) {
   muted = m
   if (m) current?.pause()
+  music.setMuted(m)
 }
 
 export function isMuted() {
@@ -13,18 +19,138 @@ export function isMuted() {
 /** Play one voice line at a time; a new line cuts the previous one. */
 export function playVoice(src: string): Promise<void> {
   current?.pause()
+  endCurrent?.()
   if (muted) return Promise.resolve()
   const audio = new Audio(src)
   current = audio
-  return new Promise((resolve) => {
+  music.duck(true)
+  return new Promise<void>((resolve) => {
+    // pause() never fires "ended", so stopVoice() settles the promise itself.
+    endCurrent = resolve
     audio.onended = () => resolve()
     audio.onerror = () => resolve()
     audio.play().catch(() => resolve())
+  }).finally(() => {
+    if (current === audio) {
+      current = null
+      endCurrent = null
+      music.duck(false)
+    }
   })
 }
 
-export function stopVoice() {
+// ---------------------------------------------------------------------------
+// Background music: pre-made Lyria tracks in public/assets/music/ (python -m backend.make_music).
+// Bump MUSIC_VERSION after regenerating so browsers drop cached old tracks.
+// ---------------------------------------------------------------------------
+
+export type Track = 'town' | 'game' | 'finale'
+const MUSIC_VERSION = 1
+const VOLUME = 0.32
+const DUCKED = 0.1 // while 小俑 is talking
+const FADE = 0.9 // seconds, between tracks
+const LOOP_FADE = 2.5 // seconds, crossfade at the loop point: the tracks end on a final chord
+
+const music = (() => {
+  let track: Track | null = null
+  let playing: HTMLAudioElement | null = null
+  let ducked = false
+  let off = false
+  let raf = 0
+  const fades = new Map<HTMLAudioElement, { from: number; to: number; start: number; secs: number }>()
+
+  const level = () => (off ? 0 : ducked ? DUCKED : VOLUME)
+
+  const fade = (a: HTMLAudioElement, to: number, secs: number) => {
+    fades.set(a, { from: a.volume, to, start: performance.now(), secs })
+    if (!raf) raf = requestAnimationFrame(tick)
+  }
+
+  function tick(now: number) {
+    for (const [a, f] of fades) {
+      const k = Math.min(1, (now - f.start) / 1000 / f.secs)
+      a.volume = Math.max(0, Math.min(1, f.from + (f.to - f.from) * k))
+      if (k >= 1) {
+        fades.delete(a)
+        if (f.to === 0 && a !== playing) a.pause()
+      }
+    }
+    // Start the next copy before the current one reaches its closing chord.
+    if (playing && track && !off && playing.duration && playing.duration - playing.currentTime < LOOP_FADE) {
+      const old = playing
+      start(track, LOOP_FADE)
+      fade(old, 0, LOOP_FADE)
+    }
+    raf = fades.size || playing ? requestAnimationFrame(tick) : 0
+  }
+
+  const start = (t: Track, secs: number) => {
+    const a = new Audio(`/assets/music/bgm_${t}.mp3?v=${MUSIC_VERSION}`)
+    a.volume = 0
+    playing = a
+    a.play().then(
+      () => fade(a, level(), secs),
+      () => {
+        // Autoplay blocked until the player touches the page: retry on the first tap or key.
+        if (playing !== a) return
+        playing = null
+        const retry = () => {
+          removeEventListener('pointerdown', retry)
+          removeEventListener('keydown', retry)
+          if (track === t && !playing) start(t, secs)
+        }
+        addEventListener('pointerdown', retry)
+        addEventListener('keydown', retry)
+      },
+    )
+    if (!raf) raf = requestAnimationFrame(tick)
+  }
+
+  return {
+    play(t: Track) {
+      if (t === track && playing) return
+      track = t
+      const old = playing
+      if (old) fade(old, 0, FADE)
+      start(t, FADE)
+    },
+    duck(on: boolean) {
+      ducked = on
+      if (playing) fade(playing, level(), 0.35)
+    },
+    setMuted(m: boolean) {
+      off = m
+      if (playing) fade(playing, level(), 0.3)
+    },
+  }
+})()
+
+export const playMusic = (t: Track) => music.play(t)
+
+/** Fallback voice when the TTS model is unavailable: the browser's built-in Chinese speech. */
+export function speakBrowser(text: string): Promise<void> {
+  if (muted || typeof speechSynthesis === 'undefined') return Promise.resolve()
   current?.pause()
+  speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = 'zh-CN'
+  u.rate = 0.85
+  u.pitch = 0.7
+  const zh = speechSynthesis.getVoices().find((v) => v.lang.startsWith('zh'))
+  if (zh) u.voice = zh
+  music.duck(true)
+  return new Promise<void>((resolve) => {
+    u.onend = () => resolve()
+    u.onerror = () => resolve()
+    speechSynthesis.speak(u)
+  }).finally(() => music.duck(false))
+}
+
+export function stopVoice() {
+  voiceEpoch++
+  current?.pause()
+  endCurrent?.()
+  if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
 }
 
 const cache = new Map<string, HTMLImageElement>()

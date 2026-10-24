@@ -68,7 +68,6 @@ export default function Passport({ hero, sprite, inGame, stamps, comment, runNo,
           <img src="/assets/img/xiaoyong_happy.png" alt="" />
           <span>小俑批注：{comment}</span>
         </div>
-        <div className="pp-event">WaytoAGI 1024 切磋大会 · 长安记得你</div>
       </div>
       <button className="btn ghost" onClick={download} disabled={busy}>
         {busy ? '生成中…' : '⬇ 保存通关文牒（主角卡）'}
