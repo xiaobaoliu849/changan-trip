@@ -116,7 +116,9 @@ export function runCount(): number {
 export function playerId(): string {
   let id = safeGet(LS_PLAYER)
   if (!id) {
-    id = 'traveler_' + crypto.randomUUID().slice(0, 12)
+    // Not crypto.randomUUID: browsers only offer it on https, and the game is also served from a bare http IP.
+    const bytes = crypto.getRandomValues(new Uint8Array(6))
+    id = 'traveler_' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
     safeSet(LS_PLAYER, id)
   }
   return id
