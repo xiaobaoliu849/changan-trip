@@ -3,6 +3,8 @@ import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, roundRe
 
 // 钟楼: notes fall onto the spot where the hanging 撞木 (striking log) meets the bronze bell.
 // Tapping makes the hero yank the rope, the log swings into the bell and the bell rings.
+// The 晨钟 is what gets the city out of bed: ringing it on the beat wakes 长安 on time,
+// while a jumbled bell (early, missed or stray strikes) leaves everyone unsure whether to get up.
 
 // Bell: hangs from the beam at (BX, BELL_TOP); its 撞座 (striking boss) is the target.
 const BEAM_Y = 160
@@ -30,6 +32,7 @@ const XY_SKIN = '#c18f6e'
 const XY_LINE = '#331a13'
 const XY_SLEEVE = '#b48665'
 
+const POP_LIFE = 0.7 // every popup lives as long, so the stack keeps its order
 const SPEED = 260
 const WINDOW = 42
 const PERFECT = 16
@@ -52,6 +55,9 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
   let best = 0
   let over = false
   let time = 0
+  let lastMissAt = -1 // when the last note slipped past; a tap just after it is the same mistake
+  let wokeAt = -1 // wall-clock ms when the 晨钟 rang through; GameCanvas stops calling update() at the end
+  let doneAt = -1 // game time when the last note was hit or missed
 
   // Animation state
   let logX = 0 // log offset from rest (negative = pulled back)
@@ -83,9 +89,12 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
 
   const end = (passed: boolean) => {
     over = true
+    if (passed) wokeAt = performance.now()
     finish({
       passed,
-      detail: `钟楼敲钟${hits}/${notes.length}下，最高连击${best}，敲错或漏敲${strikes}次${passed ? '' : '，把全城都吵醒了'}`,
+      detail: passed
+        ? `在钟楼敲响晨钟，合上节拍${hits}/${notes.length}下，最高连击${best}${strikes ? `，敲乱或漏敲${strikes}次` : ''}，全城准时起床了`
+        : `在钟楼敲晨钟，只合上节拍${hits}/${notes.length}下，敲乱或漏敲了${strikes}次，钟声乱了套，全城不知道该不该起床`,
     })
   }
 
@@ -96,7 +105,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
     wobble = 0.5
     flash = 0.35
     shake = Math.max(shake, 0.12)
-    pops.push({ text: why, t: 0.8, color: '#ff8a65' })
+    pops.push({ text: why, t: POP_LIFE, color: '#ff8a65' })
     if (strikes >= 3) end(false)
   }
 
@@ -130,12 +139,25 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
         parts.push({ x: TX + (i - 1) * 18, y: TY - 10, vx: (i - 1) * 40, vy: -120 - Math.random() * 60, life: 0.9, max: 0.9, color: '#ffe066', size: 22, text: i % 2 ? '♫' : '♪' })
       }
       if (combo >= 3) comboPop = 1
-      pops.push({ text: perfect ? '咚！完美' : '咚！', t: 0.6, color: perfect ? '#ffe066' : '#fff6e0' })
+      pops.push({ text: perfect ? '咚！完美' : '咚！', t: POP_LIFE, color: perfect ? '#ffe066' : '#fff6e0' })
     } else {
       // Swung at nothing: a dull knock on the bell.
       bellV += 0.25
       burst(TX, TY, 6, ['#b9a68a', '#8d7b63'], 120, 3)
-      strike('敲早了！')
+      const next = nextNote()
+      // After the last note the bell has done its job: extra taps just ring out, no penalty.
+      if (!next) return
+      const early = TY - next.y < 120
+      if (lastMissAt >= 0 && time - lastMissAt < 0.3) {
+        // One late tap on the note that just slipped by: that miss was already counted,
+        // even when the next note is already close (on the fast beats they overlap).
+        lastMissAt = -1
+        pops.push({ text: '晚了一点！', t: POP_LIFE, color: '#ffcc80' })
+        return
+      }
+      // Taps while the how-to banner shows, before any note is near, are free warm-ups.
+      if (!early && !notes.some((n) => n.hit || n.gone)) return
+      strike(early ? '敲早了！' : '乱敲了！')
     }
   }
 
@@ -144,7 +166,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
   return {
     update(dt) {
       time += dt
-      // Physics keeps running for a moment after the end, so the last swing settles.
+      // GameCanvas stops calling update() once finish() runs, so the final frame holds still.
       const next = nextNote()
       // Wind-up: as the next note approaches, the hero pulls the log back, hinting at the timing.
       let target = -6
@@ -191,22 +213,26 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
       }
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1)
       for (const p of pops) p.t -= dt
+      for (let i = pops.length - 1; i >= 0; i--) if (pops[i].t <= 0) pops.splice(i, 1)
 
       if (over) return
       for (const n of notes) {
         n.y += SPEED * dt
         if (!n.hit && !n.gone && n.y > TY + WINDOW) {
           n.gone = true
+          lastMissAt = time
           strike('漏了一下！')
           if (over) return
         }
       }
-      if (notes.every((n) => n.hit || n.gone) && notes[notes.length - 1].y > TY + 80) end(true)
+      // Once every note is settled, give the last swing a moment to land on the bell, then finish.
+      if (doneAt < 0 && notes.every((n) => n.hit || n.gone)) doneAt = time
+      if (doneAt >= 0 && time - doneAt > 0.25) end(true)
     },
 
     draw(ctx) {
       ctx.save()
-      if (shake > 0) ctx.translate((Math.random() - 0.5) * shake * 40, (Math.random() - 0.5) * shake * 30)
+      if (shake > 0 && !photoMode) ctx.translate((Math.random() - 0.5) * shake * 40, (Math.random() - 0.5) * shake * 30)
       drawCover(ctx, assets.bg)
       ctx.fillStyle = 'rgba(20, 16, 36, 0.42)'
       ctx.fillRect(-20, -20, W + 40, H + 40)
@@ -255,13 +281,22 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
       ctx.globalAlpha = 1
       ctx.restore()
 
-      if (flash > 0) {
+      if (flash > 0 && !photoMode) {
         ctx.fillStyle = `rgba(200, 40, 30, ${flash * 0.5})`
         ctx.fillRect(0, 0, W, H)
       }
 
-      pops.filter((p) => p.t > 0).forEach((p, i) => floatText(ctx, p.text, BX + 40, BELL_TOP - 52 - i * 30 - (0.6 - p.t) * 30, p.color))
-      if (combo >= 3 && !photoMode) {
+      // 0 while playing, then 0→1 over a quarter second as the finale banner pops in
+      const woke = wokeAt < 0 ? 0 : Math.max(0.001, Math.min(1, (performance.now() - wokeAt) / 250))
+      if (woke === 0) {
+        // Newest popup lowest, older ones stacked above it, so drifting text never crosses.
+        pops
+          .filter((p) => p.t > 0)
+          .slice(-3)
+          .reverse()
+          .forEach((p, i) => floatText(ctx, p.text, BX + 40, BELL_TOP - 52 - i * 32 - (POP_LIFE - p.t) * 12, p.color))
+      }
+      if (combo >= 3 && woke === 0 && !photoMode) {
         const s = 1 + comboPop * 0.35
         ctx.save()
         ctx.translate(120, 92)
@@ -270,7 +305,16 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
         ctx.restore()
       }
       drawGuide(ctx)
-      hud(ctx, `敲中 ${hits}/${notes.length}`, `吵醒市民 ${hearts(3 - strikes)}`)
+      if (woke > 0 && !photoMode) {
+        // The 晨钟 rang through: the city wakes up.
+        const s = 0.6 + 0.4 * (1 + 2.2 * (woke - 1) ** 3 + 1.2 * (woke - 1) ** 2) // ease-out with a little overshoot
+        ctx.save()
+        ctx.translate(W / 2, BEAM_Y - 46)
+        ctx.scale(s, s)
+        floatText(ctx, '晨钟响了，全城起床！', 0, 0, '#ffd34d', 30)
+        ctx.restore()
+      }
+      hud(ctx, `敲中 ${hits}/${notes.length}`, `钟声不乱 ${hearts(3 - strikes)}`)
     },
 
     pointer(_x, _y, down) {
@@ -650,7 +694,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
     ctx.textBaseline = 'middle'
     ctx.fillText('♪ 落到铜钟的圆圈里，点一下撞钟！', W / 2, H - 106)
     ctx.font = '15px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('也可以按空格键', W / 2, H - 82)
+    ctx.fillText('敲准晨钟，叫全城起床（电脑可按空格）', W / 2, H - 82)
     ctx.restore()
   }
 }
