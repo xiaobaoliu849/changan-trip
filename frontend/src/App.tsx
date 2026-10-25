@@ -366,9 +366,10 @@ export default function App() {
     await startRun(hero, sprite, stamps, true)
   }
 
-  const goStop = async (targetStop?: StopId) => {
-    const s = targetStop ?? stop
-    if (!s || !hero) return
+  // Loads the stop's art, then opens its intro. `apply` moves the trip on (step, stamps, lives) in the same
+  // render, so the screen being left never shows the next stop's name over its own result while images load.
+  const goStop = async (s: StopId, apply: () => void) => {
+    if (!hero) return
     const ticket = ++navTicket.current
     clearTimeout(introTimer.current)
     const [bg, heroImg, xy] = await Promise.all([
@@ -377,26 +378,27 @@ export default function App() {
       loadImage('/assets/img/xiaoyong.png'),
     ])
     if (ticket !== navTicket.current) return
+    apply()
     setAssets({ bg, hero: heroImg, xiaoyong: xy })
     setScreen('intro')
     introTimer.current = window.setTimeout(() => sayStop(s), INTRO_DELAY)
   }
 
-  // Jump straight to a custom list of stops (e.g., 1 specific stop or all missing stops) without playing the rest.
-  const playStops = async (targets: StopId[], resetStamps = false, nextLives = LIVES) => {
+  // 选关: play just these stops (one picked stop, the ones still missing a stamp, or a retry) and then go to 大雁塔.
+  const playStops = (targets: StopId[], resetStamps = false, nextLives = LIVES) => {
     if (!hero || targets.length === 0) return
     clearTimeout(answerTimer.current)
-    clearTimeout(introTimer.current)
     pendingReply.current = ''
     stopVoice()
-    if (resetStamps) setStamps([])
-    setTodoStops(targets)
-    setStep(0)
-    setLives(nextLives)
-    setResult(null)
-    setAnswer(null)
-    setReplyDone(false)
-    await goStop(targets[0])
+    return goStop(targets[0], () => {
+      if (resetStamps) setStamps([])
+      setTodoStops(targets)
+      setStep(0)
+      setLives(nextLives)
+      setResult(null)
+      setAnswer(null)
+      setReplyDone(false)
+    })
   }
 
   const sayStop = (s: StopId) => {
@@ -408,11 +410,12 @@ export default function App() {
     if (!stop || !hero) return
     setResult(r)
     if (r.snapshot) {
+      // One photo per stop: a replay takes the old one's place, unless it would swap a cleared stop for a miss.
+      const shot = { stop, src: r.snapshot, passed: r.passed }
       setShots((list) => {
-        const existing = list.find((item) => item.stop === stop)
-        if (existing?.passed && !r.passed) return list
-        const rest = list.filter((item) => item.stop !== stop)
-        return [...rest, { stop, src: r.snapshot!, passed: r.passed }]
+        const old = list.find((s) => s.stop === stop)
+        if (old?.passed && !r.passed) return list
+        return old ? list.map((s) => (s === old ? shot : s)) : [...list, shot]
       })
     }
     // Game summaries call the player 你 (shown as is on the result screen); memory is told in the
@@ -465,15 +468,11 @@ export default function App() {
     const out = lives <= 0 || step + 1 >= activeRoute.length
     if (out) {
       setScreen('final')
-      if (ending) {
-        finishRun()
-      } else {
-        say(clip('dayanta'))
-      }
+      // Back from 补章 after the journal was written: the passport just gains the new stamp and photo.
+      if (!ending) say(clip('dayanta'))
     } else {
       const nextStep = step + 1
-      setStep(nextStep)
-      goStop(activeRoute[nextStep])
+      goStop(activeRoute[nextStep], () => setStep(nextStep))
     }
   }
 
@@ -832,23 +831,30 @@ export default function App() {
                 />
               </svg>
               {[...route, 'dayanta' as const].map((p, i) => {
-                const isStop = p !== 'dayanta'
-                const isPicked = isStop && pickedStop === p
-                const isNext = pickedStop ? isPicked : i === 0
+                const style = {
+                  left: `${(PLACES[p].x / MAP_W) * 100}%`,
+                  top: `${(PLACES[p].y / MAP_H) * 100}%`,
+                  animationDelay: `${0.3 + i * 0.15}s`,
+                }
+                if (p === 'dayanta') {
+                  return (
+                    <div key={p} className="pin goal" style={style} title="终点：大雁塔">
+                      🏁
+                    </div>
+                  )
+                }
+                const isNext = pickedStop ? pickedStop === p : i === 0
                 return (
                   <button
                     type="button"
                     key={p}
-                    className={`pin${isNext ? ' next' : ''}${p === 'dayanta' ? ' goal' : ''}${isStop ? ' is-clickable' : ''}`}
-                    style={{
-                      left: `${(PLACES[p].x / MAP_W) * 100}%`,
-                      top: `${(PLACES[p].y / MAP_H) * 100}%`,
-                      animationDelay: `${0.3 + i * 0.15}s`,
-                    }}
-                    onClick={isStop ? () => setPickedStop((prev) => (prev === p ? null : p)) : undefined}
-                    title={isStop ? `点击选择「${STOPS[p].name}」` : '终点：大雁塔'}
+                    className={`pin is-clickable${isNext ? ' next' : ''}`}
+                    style={style}
+                    onClick={() => setPickedStop((prev) => (prev === p ? null : p))}
+                    aria-label={`选「${STOPS[p].name}」`}
+                    title={`选「${STOPS[p].name}」单独闯`}
                   >
-                    {p === 'dayanta' ? '🏁' : i + 1}
+                    {i + 1}
                   </button>
                 )
               })}
@@ -871,19 +877,19 @@ export default function App() {
                         setPickedStop((prev) => (prev === s ? null : s))
                       }
                     }}
-                    title={`点击选择「${STOPS[s].name}」单独闯关`}
+                    title={`选「${STOPS[s].name}」单独闯`}
                   >
                     <span className="j-icon">
                       {PLACES[s].icon}
                       <b>{i + 1}</b>
                     </span>
                     <span className="j-name">{STOPS[s].name}</span>
-                    {hasStamp ? (
+                    {isPicked ? (
+                      <span className="j-last pick-hint">已选</span>
+                    ) : hasStamp ? (
                       <span className="j-last done">已拿✓</span>
-                    ) : stamps.length > 0 || lastStamps ? (
-                      <span className="j-last">补章</span>
                     ) : (
-                      <span className="j-last pick-hint">{isPicked ? '已选' : '可选'}</span>
+                      stamps.length > 0 && <span className="j-last">补章</span>
                     )}
                   </li>
                 )
@@ -895,17 +901,19 @@ export default function App() {
             </ol>
             <p className="journey-note">
               {pickedStop
-                ? `已选「${STOPS[pickedStop].name}」：可只闯这一关拿章直达大雁塔，或从这关往后逛`
-                : stamps.length > 0 && missingStamps.length > 0
-                  ? `已保留 ${stamps.length}/${route.length} 个章！可直接补闯「补章」关卡，或点击任意景点单独挑战`
-                  : `💡 点击地图或上方任意景点，可直接跳去单独闯那一关`}
+                ? `已选「${STOPS[pickedStop].name}」：只闯这一站就去大雁塔，或从这站往后逛`
+                : missingStamps.length === 0
+                  ? `${route.length} 个章全集齐了！这次冲个全程不掉血？也可以点一站单独重玩`
+                  : stamps.length > 0
+                    ? `已集 ${stamps.length}/${route.length} 个章，标「补章」的还没拿 · 点一站可以单独闯`
+                    : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔 · 点一站可以单独闯`}
             </p>
           </div>
           <div className="cta cta-stack">
             {pickedStop ? (
               <>
                 <button type="button" className="btn big go" onClick={() => playStops([pickedStop])}>
-                  ⚡ 只闯「{STOPS[pickedStop].name}」这一关（闯完直达大雁塔） →
+                  ⚡ 只闯「{STOPS[pickedStop].name}」 →
                 </button>
                 <div className="cta-sub">
                   <button
@@ -923,14 +931,14 @@ export default function App() {
             ) : stamps.length > 0 && missingStamps.length > 0 ? (
               <>
                 <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
-                  🎯 直接去补章：{missingStamps.map((s) => STOPS[s].name).join('、')} →
+                  🎯 去补没拿的 {missingStamps.length} 个章 →
                 </button>
                 <div className="cta-sub">
                   <button type="button" className="btn ghost" onClick={() => playStops(route)}>
-                    重逛全部 5 站（保留已有印章） →
+                    重逛全部 {route.length} 站（已有的章保留） →
                   </button>
                   <button type="button" className="link" onClick={() => playStops(route, true)}>
-                    清空印章从零挑战全程
+                    清空印章，从零挑战全程
                   </button>
                 </div>
               </>
@@ -949,8 +957,7 @@ export default function App() {
             <img className="ih-bg" src={`/assets/img/bg_${stop}.jpg`} alt={STOPS[stop].name} />
             <div className="ih-title">
               <small>
-                第 {route.indexOf(stop) + 1} / {route.length} 站
-                {todoStops && todoStops.length < route.length ? ' · 选关补章' : ''} · 你带小俑来到
+                第 {route.indexOf(stop) + 1} / {route.length} 站 · 你带小俑来到
               </small>
               <h2>{STOPS[stop].name}</h2>
             </div>
@@ -1011,7 +1018,8 @@ export default function App() {
               <button
                 type="button"
                 className="btn ghost retry-btn"
-                onClick={() => playStops(activeRoute.slice(step), false, Math.min(LIVES, Math.max(1, lives + 1)))}
+                // A retry gives back the heart this miss cost, then the trip carries on from here.
+                onClick={() => playStops(activeRoute.slice(step), false, Math.min(LIVES, lives + 1))}
               >
                 🔄 再闯一次「{STOPS[stop].name}」
               </button>
@@ -1093,20 +1101,29 @@ export default function App() {
                           key={s}
                           className="ts-seal is-clickable"
                           onClick={() => playStops([s])}
-                          title={has ? `点击重新挑战「${STOPS[s].name}」` : `点击直接去「${STOPS[s].name}」补章`}
+                          // Not while 小俑 writes the journal: it would start reading it aloud mid-game.
+                          disabled={endBusy}
+                          title={has ? `重玩「${STOPS[s].name}」` : `去「${STOPS[s].name}」补章`}
                         >
                           <div className={has ? 'seal on' : 'seal'}>{STOPS[s].stamp}</div>
                           <small>{STOPS[s].name}</small>
-                          <em className={`ts-retry-tag${has ? ' done' : ''}`}>{has ? '可重玩' : '点此补章'}</em>
+                          <em className={`ts-retry-tag${has ? ' done' : ''}`}>{has ? '重玩' : '补章'}</em>
                         </button>
                       )
                     })}
                   </div>
                   {missingStamps.length > 0 && (
                     <div className="ts-makeup">
-                      <span>差 {missingStamps.length} 个章就集齐了！不用重玩全程，点上方空章或直接去补：</span>
-                      <button type="button" className="btn ghost ts-makeup-btn" onClick={() => playStops(missingStamps)}>
-                        🎯 只闯未拿章的 {missingStamps.length} 关（{missingStamps.map((s) => STOPS[s].name).join('、')}） →
+                      <span>差 {missingStamps.length} 个章集齐 · 点上面的空章单独补，不用重走全程</span>
+                      <button
+                        type="button"
+                        className="btn ghost ts-makeup-btn"
+                        onClick={() => playStops(missingStamps)}
+                        disabled={endBusy}
+                      >
+                        {missingStamps.length === 1
+                          ? `🎯 去补「${STOPS[missingStamps[0]].stamp}」章 →`
+                          : `🎯 连闯没拿章的 ${missingStamps.length} 站 →`}
                       </button>
                     </div>
                   )}
@@ -1151,7 +1168,6 @@ export default function App() {
                   comment={ending.comment}
                   runNo={runNo}
                   photo={photo?.url}
-                  onPickStop={(s) => playStops([s])}
                   extra={
                     postcard ? (
                       <a className="btn ghost keep" href={postcard} download={`大雁塔合影-${hero.name}.png`}>
@@ -1171,13 +1187,13 @@ export default function App() {
                   <div className="sp-head">
                     <b>
                       {missingStamps.length > 0
-                        ? `🎯 差 ${missingStamps.length} 枚印章满贯 · 选关直接补章`
-                        : '🎉 五枚印章已集齐 · 任选一关单独重温'}
+                        ? `🎯 差 ${missingStamps.length} 个章集齐 · 选一站去补`
+                        : `🎉 ${route.length} 个章全集齐了 · 想重玩哪站点哪站`}
                     </b>
                     <span>
                       {missingStamps.length > 0
-                        ? '不用从头玩！点下面任一景点单独闯关，过关直接回大雁塔盖章'
-                        : '想刷哪一关或换一张游历留影照片，点景点即可直接开玩'}
+                        ? '不用从头玩：闯过就回到这里，文牒上补盖新章'
+                        : '重玩一站，还能换一张游历留影'}
                     </span>
                   </div>
                   <div className="sp-grid">
@@ -1192,14 +1208,14 @@ export default function App() {
                         >
                           <span className="sp-icon">{PLACES[s].icon}</span>
                           <b>{STOPS[s].name}</b>
-                          <small>{has ? `✓ ${STOPS[s].stamp}章` : `补「${STOPS[s].stamp}」章`}</small>
+                          <small>{has ? '✓ 已拿' : '补章'}</small>
                         </button>
                       )
                     })}
                   </div>
                   {missingStamps.length > 1 && (
                     <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
-                      ⚡ 一键连闯未拿章的 {missingStamps.length} 关（{missingStamps.map((s) => STOPS[s].name).join('、')}） →
+                      ⚡ 连闯没拿章的 {missingStamps.length} 站 →
                     </button>
                   )}
                 </div>
