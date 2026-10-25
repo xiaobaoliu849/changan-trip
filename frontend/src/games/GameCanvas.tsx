@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { StopResult } from '../api'
-import { H, W, setPhotoMode, type Assets, type GameFactory } from './engine'
+import { H, W, photoCrop, setPhotoMode, type Assets, type GameFactory } from './engine'
 
 interface Props {
   factory: GameFactory
@@ -35,11 +35,13 @@ export default function GameCanvas({ factory, assets, options, onDone }: Props) 
         setPhotoMode(true)
         try {
           game.draw(ctx)
-          // At game size, not the dpr-scaled backing store: the passport shows it ~170 px wide.
+          // Framed on the hero and 小俑 — the whole 480×720 frame shrinks them to specks on the card.
+          // At backing-store resolution: the crop is small, and the saved card renders it at 2x.
+          const c = photoCrop(dpr)
           const shot = document.createElement('canvas')
-          shot.width = W
-          shot.height = H
-          shot.getContext('2d')!.drawImage(canvas, 0, 0, W, H)
+          shot.width = Math.round(c.w * dpr)
+          shot.height = Math.round(c.h * dpr)
+          shot.getContext('2d')!.drawImage(canvas, c.x * dpr, c.y * dpr, c.w * dpr, c.h * dpr, 0, 0, shot.width, shot.height)
           snapshot = shot.toDataURL('image/jpeg', 0.85)
         } catch {
           snapshot = undefined

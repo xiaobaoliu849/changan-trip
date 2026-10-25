@@ -1,5 +1,5 @@
 import { FOODS, type FoodId } from '../api'
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawActor, drawCover, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 interface Item {
   kind: FoodId | 'chili' | 'bonus'
@@ -187,8 +187,8 @@ export const catchFood: GameFactory = ({ assets, finish, options }) => {
             wanted ? 'rgba(255, 214, 77, 0.95)' : 'rgba(40, 24, 14, 0.7)', wanted ? '#5a2d12' : '#f0e2c8')
         }
       }
-      drawSprite(ctx, assets.xiaoyong, xy, H - 40, 84, xy > x)
-      drawSprite(ctx, assets.hero, x, H - 40, 130)
+      drawActor(ctx, assets.xiaoyong, xy, H - 40, 84, xy > x)
+      drawActor(ctx, assets.hero, x, H - 40, 130)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color, 22)
       if (flash > 0 && !photoMode) {
         ctx.fillStyle = `rgba(255, 60, 30, ${flash * 0.6})`

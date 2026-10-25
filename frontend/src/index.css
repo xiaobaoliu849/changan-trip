@@ -1335,12 +1335,6 @@ textarea {
 }
 
 /* passport */
-.passport-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 /* 通关文牒: a red-mounted parchment document; it is also what gets saved as the 主角卡 PNG. */
 .passport {
   padding: 6px;
@@ -1539,6 +1533,7 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Shots are cut 3:4 around the pair; a frame with nobody in it is still the full 2:3 game. */
   object-position: 50% 78%;
 }
 
@@ -1550,12 +1545,12 @@ textarea {
   color: #5a3a1e;
 }
 
-/* Photo picker; left out of the saved PNG. */
+/* Photo picker; left out of the saved PNG. Along the top: the hero and 小俑 stand at the bottom. */
 .pp-pick {
   position: absolute;
   left: 6px;
   right: 6px;
-  bottom: 6px;
+  top: 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1740,6 +1735,22 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+/* The journal and passport run past the fold: keep saving in reach until the bar's own spot scrolls in. */
+.final .keep-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 -16px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(rgba(255, 246, 224, 0), var(--paper) 14px);
+  /* The faded top must not swallow taps meant for what scrolls under it. */
+  pointer-events: none;
+}
+
+.final .keep-row > * {
+  pointer-events: auto;
 }
 
 .btn.keep {

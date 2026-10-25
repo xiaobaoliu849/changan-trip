@@ -1,5 +1,5 @@
 import { playBell, playMiss } from '../media'
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, roundRect, type GameFactory } from './engine'
+import { H, W, drawActor, drawCover, floatText, hearts, hud, photoMode, roundRect, type GameFactory } from './engine'
 
 // 钟楼: notes fall onto the spot where the hanging 撞木 (striking log) meets the bronze bell.
 // Tapping makes the hero yank the rope, the log swings into the bell and the bell rings.
@@ -528,7 +528,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
     ctx.beginPath()
     ctx.ellipse(0, 2, 46, 9, 0, 0, Math.PI * 2)
     ctx.fill()
-    drawSprite(ctx, assets.hero, 0, bob, HERO_H)
+    drawActor(ctx, assets.hero, 0, bob, HERO_H)
     ctx.restore()
   }
 
@@ -543,7 +543,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
     ctx.save()
     ctx.translate(W - 78, H - 34 - hop)
     ctx.rotate(tilt)
-    drawSprite(ctx, img, 0, 0, XY_H)
+    drawActor(ctx, img, 0, 0, XY_H)
     if (ears > 0) {
       const e = 1 - (1 - ears) ** 3 // ease out
       if (ears > 0.5) {

@@ -1,4 +1,4 @@
-import { H, W, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawActor, floatText, photoKeep, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 interface Obstacle {
   x: number
@@ -140,6 +140,8 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
         ctx.lineWidth = 6
         ctx.lineCap = 'round'
         const spin = scroll / 24
+        // The bike belongs in the passport photo too.
+        photoKeep(ctx, PX - 64, py - 56, PX + 64, py + 4)
         for (const wx of [PX - 36, PX + 36]) {
           ctx.beginPath()
           ctx.arc(wx, py - 24, 24, 0, Math.PI * 2)
@@ -156,9 +158,9 @@ export const wallRide: GameFactory = ({ assets, finish, options }) => {
         ctx.moveTo(PX + 30, py - 56)
         ctx.lineTo(PX + 36, py - 24)
         ctx.stroke()
-        drawSprite(ctx, assets.hero, PX, py - 40, 140)
+        drawActor(ctx, assets.hero, PX, py - 40, 140)
         // 小俑 rides in a wicker basket over the front wheel.
-        drawSprite(ctx, assets.xiaoyong, PX + 56, py - 52, 58)
+        drawActor(ctx, assets.xiaoyong, PX + 56, py - 52, 58)
         ctx.fillStyle = '#a8743f'
         roundRect(ctx, PX + 34, py - 70, 44, 22, 5)
         ctx.fill()

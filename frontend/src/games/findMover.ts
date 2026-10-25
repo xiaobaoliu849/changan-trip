@@ -1,4 +1,4 @@
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, type GameFactory } from './engine'
+import { H, W, drawActor, drawCover, drawSprite, floatText, hearts, hud, type GameFactory } from './engine'
 
 interface Warrior {
   x: number
@@ -83,9 +83,9 @@ export const findMover: GameFactory = ({ assets, finish }) => {
         drawSprite(ctx, assets.xiaoyong, 0, 0, w.h)
         ctx.restore()
       })
-      drawSprite(ctx, assets.hero, 64, H - 8, 110)
+      drawActor(ctx, assets.hero, 64, H - 8, 110)
       // Our 小俑, awake and in full color next to the traveler.
-      drawSprite(ctx, assets.xiaoyong, 150, H - 8, 84)
+      drawActor(ctx, assets.xiaoyong, 150, H - 8, 84)
       for (const p of pops) if (p.t > 0) floatText(ctx, p.text, p.x, p.y, p.color)
       hud(ctx, `⏱ ${Math.max(0, Math.ceil(time))}s  找到 ${found}/${ROUNDS}`, `${hearts(3 - wrong)}`)
       if (shown === 0) floatText(ctx, '盯紧了……', W / 2, 140, '#ffe9b0', 24)

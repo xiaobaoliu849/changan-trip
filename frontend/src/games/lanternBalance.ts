@@ -1,4 +1,4 @@
-import { H, W, drawCover, drawSprite, floatText, hearts, hud, photoMode, rand, roundRect, type GameFactory } from './engine'
+import { H, W, drawActor, drawCover, floatText, hearts, hud, photoKeep, photoMode, rand, roundRect, type GameFactory } from './engine'
 
 const TIME = 30
 const LIMIT = 1.0
@@ -85,10 +85,10 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
       // The hero steps toward the pressed side, so the controls visibly do something.
       const hx = W / 2 + step * 34
       const hy = H - 120
-      drawSprite(ctx, assets.xiaoyong, xy, hy, 84)
+      drawActor(ctx, assets.xiaoyong, xy, hy, 84)
       // 小俑 calls out the steps now and then.
       if (t > CALM && fallen <= 0 && t % 4 < 0.9) floatText(ctx, '嘿——哟！', xy, hy - 96, '#ffe9b0', 18)
-      drawSprite(ctx, assets.hero, hx, hy, 160)
+      drawActor(ctx, assets.hero, hx, hy, 160)
       // Lantern pole on the hero's head
       const top = hy - 155
       ctx.save()
@@ -100,6 +100,8 @@ export const lanternBalance: GameFactory = ({ assets, finish }) => {
       ctx.moveTo(0, 0)
       ctx.lineTo(0, -STACK * 52 - 10)
       ctx.stroke()
+      // The 1024 stack is the point of the passport photo here.
+      photoKeep(ctx, -24, -STACK * 52 - 24, 24, 0)
       ctx.font = '44px serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'

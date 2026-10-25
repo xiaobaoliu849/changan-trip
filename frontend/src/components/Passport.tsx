@@ -65,7 +65,7 @@ export default function Passport({ hero, sprite, shots, stamps, route, comment, 
   const flip = (d: number) => setPick((i) => (i + d + shots.length) % shots.length)
 
   return (
-    <div className="passport-wrap">
+    <>
       <div className="passport" ref={ref}>
         <div className="pp-paper">
           <i className="pp-corner tl" />
@@ -160,6 +160,6 @@ export default function Passport({ hero, sprite, shots, stamps, route, comment, 
         </button>
         {extra}
       </div>
-    </div>
+    </>
   )
 }

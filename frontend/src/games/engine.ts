@@ -30,6 +30,44 @@ export type GameFactory = (env: GameEnv) => Game
 export let photoMode = false
 export const setPhotoMode = (on: boolean) => {
   photoMode = on
+  if (on) actors = props = null
+}
+
+type Box = { x0: number; y0: number; x1: number; y1: number }
+// Where the photo frame drew the hero and 小俑, and what they carry, in backing-store pixels.
+let actors: Box | null = null
+let props: Box | null = null
+
+const grow = (b: Box | null, x: number, y: number): Box =>
+  b ? { x0: Math.min(b.x0, x), y0: Math.min(b.y0, y), x1: Math.max(b.x1, x), y1: Math.max(b.y1, y) } : { x0: x, y0: y, x1: x, y1: y }
+
+/**
+ * Keep a box (in the current transform) inside the passport photo. Actors also set how close the shot is;
+ * props (a bike, a lantern pole) only have to fit.
+ */
+export function photoKeep(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, actor = false) {
+  if (!photoMode) return
+  const m = ctx.getTransform()
+  for (const [x, y] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1]]) {
+    const p = m.transformPoint(new DOMPoint(x, y))
+    if (actor) actors = grow(actors, p.x, p.y)
+    props = grow(props, p.x, p.y)
+  }
+}
+
+/** The 3:4 part of the frame (game units) the passport photo shows: the pair large, feet near the bottom. */
+export function photoCrop(scale: number) {
+  // Nobody drawn: the whole frame, as before.
+  if (!actors || !props) return { x: 0, y: 0, w: W, h: H }
+  const all = { x0: props.x0 / scale, y0: props.y0 / scale, x1: props.x1 / scale, y1: props.y1 / scale }
+  const h = Math.min(
+    Math.max(((actors.y1 - actors.y0) / scale) * 2.2, (all.y1 - all.y0) * 1.18, (all.x1 - all.x0) * 1.2 * (4 / 3), 320),
+    H,
+    (W * 4) / 3,
+  )
+  const w = (h * 3) / 4
+  const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max)
+  return { x: clamp((all.x0 + all.x1) / 2 - w / 2, W - w), y: clamp(all.y1 - h * 0.92, H - h), w, h }
 }
 
 /** Draw ``img`` to cover the whole canvas, like CSS background-size: cover. */
@@ -49,6 +87,15 @@ export function drawSprite(ctx: CanvasRenderingContext2D, img: HTMLImageElement,
   if (flip) ctx.scale(-1, 1)
   ctx.drawImage(img, -w / 2, -h, w, h)
   ctx.restore()
+}
+
+/** ``drawSprite`` for the hero and our 小俑: the passport photo is framed around these. */
+export function drawActor(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, h: number, flip = false) {
+  drawSprite(ctx, img, x, y, h, flip)
+  // An image that never loaded has no size to frame.
+  if (!img.height) return
+  const w = (img.width / img.height) * h
+  photoKeep(ctx, x - w / 2, y - h, x + w / 2, y, true)
 }
 
 export function hud(ctx: CanvasRenderingContext2D, left: string, right: string) {
