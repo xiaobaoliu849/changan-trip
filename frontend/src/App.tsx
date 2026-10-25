@@ -157,6 +157,10 @@ export default function App() {
   const [stamps, setStamps] = useState<StopId[]>([])
   // Stamps from the previous trip of this hero (null on a new hero), shown on the route and while recalling.
   const [lastStamps, setLastStamps] = useState<StopId[] | null>(null)
+  // Custom subset of stops when the player chooses specific level(s) to make up missing badges (补章) or replay.
+  const [todoStops, setTodoStops] = useState<StopId[] | null>(null)
+  // Selected stop on the map screen for direct jump.
+  const [pickedStop, setPickedStop] = useState<StopId | null>(null)
   const [log, setLog] = useState<string[]>([])
   const [result, setResult] = useState<StopResult | null>(null)
   // A clean frame from each stop's game; the traveler picks one for the passport.
@@ -184,14 +188,18 @@ export default function App() {
   const answerTimer = useRef(0)
   // 小俑's intro line, due INTRO_DELAY after the intro opens; dropped if the intro is left first.
   const introTimer = useRef(0)
+  // Guards async image loads in goStop against rapid clicks or returning to 首页.
+  const navTicket = useRef(0)
   // Which answer's reply is still playing (`${runId}:${step}`), so a late reply can't move the trip on.
   const pendingReply = useRef('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const route = brief?.route ?? []
+  const route = brief?.route ?? ROUTE
+  const activeRoute = todoStops ?? route
+  const missingStamps = useMemo(() => route.filter((s) => !stamps.includes(s)), [route, stamps])
   // 首页 greets a remembered traveler back, unless they said they are someone new.
   const welcomeBack = saved && !newcomer ? saved : null
-  const stop = route[step]
+  const stop = activeRoute[step]
 
   useEffect(() => {
     playMusic(SCREEN_MUSIC[screen])
@@ -257,18 +265,20 @@ export default function App() {
   const sayGreeting = (greeting: string) =>
     greeting === OPENING_LINE ? say(clip('opening')) : greeting === AGAIN_LINE ? say(clip('again')) : sayText(greeting)
 
-  const startRun = async (h: Hero, rawSprite: string) => {
+  const startRun = async (h: Hero, rawSprite: string, initialStamps: StopId[] = [], keepShots = false) => {
     const no = nextRunNo()
     setRunNo(no)
     setRunId(`run_${Date.now()}`)
+    setTodoStops(null)
+    setPickedStop(null)
     setStep(0)
     setLives(LIVES)
-    setStamps([])
+    setStamps(initialStamps)
     setLog([])
     setEnding(null)
     setPostcard('')
     setSaid('')
-    setShots([])
+    if (!keepShots) setShots([])
     const [cut, b] = await Promise.all([
       cutOutWhite(rawSprite),
       api.brief(h, no).catch((): Brief => ({
@@ -317,11 +327,11 @@ export default function App() {
     setScreen('prologue')
     try {
       if (useDefault) {
-        await startRun(DEFAULT_HERO, '/assets/img/default_hero.jpg')
+        await startRun(DEFAULT_HERO, '/assets/img/default_hero.jpg', [])
         return
       }
       const r = await api.hero(text, photo ?? undefined)
-      await startRun(r.hero, r.sprite)
+      await startRun(r.hero, r.sprite, [])
     } catch (e) {
       setError(`生成失败了：${e instanceof Error ? e.message.slice(0, 120) : e}`)
       setScreen('home')
@@ -340,7 +350,7 @@ export default function App() {
     setMet(null)
     setScreen('making')
     try {
-      await startRun(saved.hero, saved.sprite)
+      await startRun(saved.hero, saved.sprite, saved.stamps)
     } catch (e) {
       setError(`出发失败了：${e instanceof Error ? e.message.slice(0, 120) : e}`)
       setScreen('home')
@@ -353,19 +363,40 @@ export default function App() {
     setReady(false)
     setScreen('making')
     stopVoice()
-    await startRun(hero, sprite)
+    await startRun(hero, sprite, stamps, true)
   }
 
-  const goStop = async () => {
-    if (!stop || !hero) return
+  const goStop = async (targetStop?: StopId) => {
+    const s = targetStop ?? stop
+    if (!s || !hero) return
+    const ticket = ++navTicket.current
+    clearTimeout(introTimer.current)
     const [bg, heroImg, xy] = await Promise.all([
-      loadImage(`/assets/img/bg_${stop}.jpg`),
+      loadImage(`/assets/img/bg_${s}.jpg`),
       loadImage(sprite),
       loadImage('/assets/img/xiaoyong.png'),
     ])
+    if (ticket !== navTicket.current) return
     setAssets({ bg, hero: heroImg, xiaoyong: xy })
     setScreen('intro')
-    introTimer.current = window.setTimeout(() => sayStop(stop), INTRO_DELAY)
+    introTimer.current = window.setTimeout(() => sayStop(s), INTRO_DELAY)
+  }
+
+  // Jump straight to a custom list of stops (e.g., 1 specific stop or all missing stops) without playing the rest.
+  const playStops = async (targets: StopId[], resetStamps = false, nextLives = LIVES) => {
+    if (!hero || targets.length === 0) return
+    clearTimeout(answerTimer.current)
+    clearTimeout(introTimer.current)
+    pendingReply.current = ''
+    stopVoice()
+    if (resetStamps) setStamps([])
+    setTodoStops(targets)
+    setStep(0)
+    setLives(nextLives)
+    setResult(null)
+    setAnswer(null)
+    setReplyDone(false)
+    await goStop(targets[0])
   }
 
   const sayStop = (s: StopId) => {
@@ -376,14 +407,21 @@ export default function App() {
   const onDone = (r: StopResult) => {
     if (!stop || !hero) return
     setResult(r)
-    if (r.snapshot) setShots((list) => [...list, { stop, src: r.snapshot!, passed: r.passed }])
+    if (r.snapshot) {
+      setShots((list) => {
+        const existing = list.find((item) => item.stop === stop)
+        if (existing?.passed && !r.passed) return list
+        const rest = list.filter((item) => item.stop !== stop)
+        return [...rest, { stop, src: r.snapshot!, passed: r.passed }]
+      })
+    }
     // Game summaries call the player 你 (shown as is on the result screen); memory is told in the
     // third person, so the traveler is named there. Only catchFood uses 你 today.
     const told = r.detail.split('你').join(hero.name)
     const line = `${STOPS[stop].name}：${told}`
     setLog((l) => [...l, line])
     pushLocalLog(`第${runNo}次游西安，${hero.name}带小俑到了${line}`)
-    if (r.passed) setStamps((s) => [...s, stop])
+    if (r.passed) setStamps((s) => (s.includes(stop) ? s : [...s, stop]))
     else setLives((n) => n - 1)
     api.stop(runId, runNo, hero, stop, { ...r, detail: told }).catch(() => undefined)
     setAnswer(null)
@@ -424,20 +462,20 @@ export default function App() {
   const next = () => {
     clearTimeout(answerTimer.current)
     pendingReply.current = ''
-    const out = lives <= 0 || step + 1 >= route.length
+    const out = lives <= 0 || step + 1 >= activeRoute.length
     if (out) {
       setScreen('final')
-      say(clip('dayanta'))
+      if (ending) {
+        finishRun()
+      } else {
+        say(clip('dayanta'))
+      }
     } else {
-      setStep(step + 1)
-      setScreen('greet')
+      const nextStep = step + 1
+      setStep(nextStep)
+      goStop(activeRoute[nextStep])
     }
   }
-
-  useEffect(() => {
-    if (screen === 'greet' && step > 0) goStop()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, step])
 
   const finishRun = async () => {
     if (!hero) return
@@ -493,6 +531,10 @@ export default function App() {
   // Back to the start screen; the home screen wipes this traveler, so ask first unless nothing is lost yet.
   const goHome = () => {
     if (screen !== 'greet' && !ending && !window.confirm('回到首页重新开始？这一趟的进度不会保留。')) return
+    ++navTicket.current
+    clearTimeout(introTimer.current)
+    clearTimeout(answerTimer.current)
+    pendingReply.current = ''
     stopVoice()
     setSpeaking(false)
     setText('')
@@ -615,7 +657,7 @@ export default function App() {
                   <small>小俑还记得你</small>
                   <b>{welcomeBack.hero.name}</b>
                   <span>
-                    {welcomeBack.hero.title} · 带它出来过 {runCount() || 1} 次 · 上回集了 {welcomeBack.stamps.length}/{ROUTE.length} 个章
+                    {welcomeBack.hero.title} · 带它出来过 {runCount() || 1} 次 · 已集 {welcomeBack.stamps.length}/{ROUTE.length} 个章
                   </span>
                 </div>
               </div>
@@ -741,7 +783,7 @@ export default function App() {
               </div>
               <p className="wait">{RECALL_LINES[waitLine]}</p>
               <p className="recall-note">
-                还是你：{hero.name} · 上回集了 {lastStamps.length}/{ROUTE.length} 个章
+                还是你：{hero.name} · 已集 {lastStamps.length}/{ROUTE.length} 个章
               </p>
             </>
           ) : (
@@ -789,49 +831,114 @@ export default function App() {
                   vectorEffect="non-scaling-stroke"
                 />
               </svg>
-              {[...route, 'dayanta' as const].map((p, i) => (
-                <div
-                  key={p}
-                  className={`pin${i === 0 ? ' next' : ''}${p === 'dayanta' ? ' goal' : ''}`}
-                  style={{
-                    left: `${(PLACES[p].x / MAP_W) * 100}%`,
-                    top: `${(PLACES[p].y / MAP_H) * 100}%`,
-                    animationDelay: `${0.3 + i * 0.15}s`,
-                  }}
-                >
-                  {p === 'dayanta' ? '🏁' : i + 1}
-                </div>
-              ))}
+              {[...route, 'dayanta' as const].map((p, i) => {
+                const isStop = p !== 'dayanta'
+                const isPicked = isStop && pickedStop === p
+                const isNext = pickedStop ? isPicked : i === 0
+                return (
+                  <button
+                    type="button"
+                    key={p}
+                    className={`pin${isNext ? ' next' : ''}${p === 'dayanta' ? ' goal' : ''}${isStop ? ' is-clickable' : ''}`}
+                    style={{
+                      left: `${(PLACES[p].x / MAP_W) * 100}%`,
+                      top: `${(PLACES[p].y / MAP_H) * 100}%`,
+                      animationDelay: `${0.3 + i * 0.15}s`,
+                    }}
+                    onClick={isStop ? () => setPickedStop((prev) => (prev === p ? null : p)) : undefined}
+                    title={isStop ? `点击选择「${STOPS[p].name}」` : '终点：大雁塔'}
+                  >
+                    {p === 'dayanta' ? '🏁' : i + 1}
+                  </button>
+                )
+              })}
             </div>
             <ol className="journey">
-              {route.map((s, i) => (
-                <li key={s} className={i === 0 ? 'next' : ''}>
-                  <span className="j-icon">
-                    {PLACES[s].icon}
-                    <b>{i + 1}</b>
-                  </span>
-                  <span className="j-name">{STOPS[s].name}</span>
-                  {lastStamps &&
-                    (lastStamps.includes(s) ? <span className="j-last done">上次✓</span> : <span className="j-last">补章</span>)}
-                </li>
-              ))}
+              {route.map((s, i) => {
+                const isPicked = pickedStop === s
+                const isNext = pickedStop ? isPicked : i === 0
+                const hasStamp = stamps.includes(s)
+                return (
+                  <li
+                    key={s}
+                    className={`${isNext ? 'next' : ''}${isPicked ? ' is-picked' : ''} is-clickable`}
+                    onClick={() => setPickedStop((prev) => (prev === s ? null : s))}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setPickedStop((prev) => (prev === s ? null : s))
+                      }
+                    }}
+                    title={`点击选择「${STOPS[s].name}」单独闯关`}
+                  >
+                    <span className="j-icon">
+                      {PLACES[s].icon}
+                      <b>{i + 1}</b>
+                    </span>
+                    <span className="j-name">{STOPS[s].name}</span>
+                    {hasStamp ? (
+                      <span className="j-last done">已拿✓</span>
+                    ) : stamps.length > 0 || lastStamps ? (
+                      <span className="j-last">补章</span>
+                    ) : (
+                      <span className="j-last pick-hint">{isPicked ? '已选' : '可选'}</span>
+                    )}
+                  </li>
+                )
+              })}
               <li className="goal">
                 <span className="j-icon">{PLACES.dayanta.icon}</span>
                 <span className="j-name">大雁塔</span>
               </li>
             </ol>
             <p className="journey-note">
-              {lastStamps
-                ? lastStamps.length >= route.length
-                  ? `上次 ${route.length} 个章全集齐了，这次冲个全程不掉血！`
-                  : `上次集了 ${lastStamps.length}/${route.length} 个章，这次把「补章」的拿下！`
-                : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔`}
+              {pickedStop
+                ? `已选「${STOPS[pickedStop].name}」：可只闯这一关拿章直达大雁塔，或从这关往后逛`
+                : stamps.length > 0 && missingStamps.length > 0
+                  ? `已保留 ${stamps.length}/${route.length} 个章！可直接补闯「补章」关卡，或点击任意景点单独挑战`
+                  : `💡 点击地图或上方任意景点，可直接跳去单独闯那一关`}
             </p>
           </div>
-          <div className="cta">
-            <button className="btn big go" onClick={goStop}>
-              第一站：{stop ? STOPS[stop].name : ''} →
-            </button>
+          <div className="cta cta-stack">
+            {pickedStop ? (
+              <>
+                <button type="button" className="btn big go" onClick={() => playStops([pickedStop])}>
+                  ⚡ 只闯「{STOPS[pickedStop].name}」这一关（闯完直达大雁塔） →
+                </button>
+                <div className="cta-sub">
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => playStops(route.slice(route.indexOf(pickedStop)))}
+                  >
+                    从「{STOPS[pickedStop].name}」往后顺着逛 →
+                  </button>
+                  <button type="button" className="link" onClick={() => setPickedStop(null)}>
+                    取消选关
+                  </button>
+                </div>
+              </>
+            ) : stamps.length > 0 && missingStamps.length > 0 ? (
+              <>
+                <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
+                  🎯 直接去补章：{missingStamps.map((s) => STOPS[s].name).join('、')} →
+                </button>
+                <div className="cta-sub">
+                  <button type="button" className="btn ghost" onClick={() => playStops(route)}>
+                    重逛全部 5 站（保留已有印章） →
+                  </button>
+                  <button type="button" className="link" onClick={() => playStops(route, true)}>
+                    清空印章从零挑战全程
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button type="button" className="btn big go" onClick={() => playStops(route)}>
+                第一站：{stop ? STOPS[stop].name : ''} →
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -842,7 +949,8 @@ export default function App() {
             <img className="ih-bg" src={`/assets/img/bg_${stop}.jpg`} alt={STOPS[stop].name} />
             <div className="ih-title">
               <small>
-                第 {step + 1} / {route.length} 站 · 你带小俑来到
+                第 {route.indexOf(stop) + 1} / {route.length} 站
+                {todoStops && todoStops.length < route.length ? ' · 选关补章' : ''} · 你带小俑来到
               </small>
               <h2>{STOPS[stop].name}</h2>
             </div>
@@ -897,7 +1005,18 @@ export default function App() {
           <h2>{result.passed ? `${STOPS[stop].name} · 盖章！` : `${STOPS[stop].name} · 没过去`}</h2>
           <p className="detail">{result.detail}</p>
           <p className="saved">📒 小俑记下了</p>
-          {!result.passed && <p className="lives">体力 {'❤️'.repeat(Math.max(0, lives))}</p>}
+          {!result.passed && (
+            <div className="retry-row">
+              <p className="lives">体力 {'❤️'.repeat(Math.max(0, lives))}</p>
+              <button
+                type="button"
+                className="btn ghost retry-btn"
+                onClick={() => playStops(activeRoute.slice(step), false, Math.min(LIVES, Math.max(1, lives + 1)))}
+              >
+                🔄 再闯一次「{STOPS[stop].name}」
+              </button>
+            </div>
+          )}
           <div className="ask">
             <div className="ask-tag">小俑问你</div>
             <Xiaoyong
@@ -917,7 +1036,12 @@ export default function App() {
                   ))}
                 </div>
                 <p className="ask-note">
-                  答完就出发 · {lives <= 0 ? '体力用完了，直奔大雁塔' : step + 1 >= route.length ? '去终点大雁塔' : `下一站：${STOPS[route[step + 1]].name}`}
+                  答完就出发 ·{' '}
+                  {lives <= 0
+                    ? '体力用完了，直奔大雁塔'
+                    : step + 1 >= activeRoute.length
+                      ? '去终点大雁塔'
+                      : `下一站：${STOPS[activeRoute[step + 1]].name}`}
                 </p>
               </>
             ) : (
@@ -926,7 +1050,11 @@ export default function App() {
                 style={{ animationDuration: `${AUTO_GO}ms` }}
                 onClick={next}
               >
-                {lives <= 0 ? '体力用完了，赶末班地铁去大雁塔 →' : step + 1 >= route.length ? '去终点大雁塔 →' : `下一站：${STOPS[route[step + 1]].name} →`}
+                {lives <= 0
+                  ? '体力用完了，赶末班地铁去大雁塔 →'
+                  : step + 1 >= activeRoute.length
+                    ? '去终点大雁塔 →'
+                    : `下一站：${STOPS[activeRoute[step + 1]].name} →`}
               </button>
             )}
           </div>
@@ -957,13 +1085,31 @@ export default function App() {
                     </span>
                   </div>
                   <div className="ts-seals">
-                    {route.map((s) => (
-                      <div key={s} className="ts-seal">
-                        <div className={stamps.includes(s) ? 'seal on' : 'seal'}>{STOPS[s].stamp}</div>
-                        <small>{STOPS[s].name}</small>
-                      </div>
-                    ))}
+                    {route.map((s) => {
+                      const has = stamps.includes(s)
+                      return (
+                        <button
+                          type="button"
+                          key={s}
+                          className="ts-seal is-clickable"
+                          onClick={() => playStops([s])}
+                          title={has ? `点击重新挑战「${STOPS[s].name}」` : `点击直接去「${STOPS[s].name}」补章`}
+                        >
+                          <div className={has ? 'seal on' : 'seal'}>{STOPS[s].stamp}</div>
+                          <small>{STOPS[s].name}</small>
+                          <em className={`ts-retry-tag${has ? ' done' : ''}`}>{has ? '可重玩' : '点此补章'}</em>
+                        </button>
+                      )
+                    })}
                   </div>
+                  {missingStamps.length > 0 && (
+                    <div className="ts-makeup">
+                      <span>差 {missingStamps.length} 个章就集齐了！不用重玩全程，点上方空章或直接去补：</span>
+                      <button type="button" className="btn ghost ts-makeup-btn" onClick={() => playStops(missingStamps)}>
+                        🎯 只闯未拿章的 {missingStamps.length} 关（{missingStamps.map((s) => STOPS[s].name).join('、')}） →
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <Xiaoyong
                   mood="happy"
@@ -1005,6 +1151,7 @@ export default function App() {
                   comment={ending.comment}
                   runNo={runNo}
                   photo={photo?.url}
+                  onPickStop={(s) => playStops([s])}
                   extra={
                     postcard ? (
                       <a className="btn ghost keep" href={postcard} download={`大雁塔合影-${hero.name}.png`}>
@@ -1020,6 +1167,42 @@ export default function App() {
                   }
                 />
                 {postcard && <img className="postcard-img" src={postcard} alt="和小俑在大雁塔的合影" />}
+                <div className="card stop-picker">
+                  <div className="sp-head">
+                    <b>
+                      {missingStamps.length > 0
+                        ? `🎯 差 ${missingStamps.length} 枚印章满贯 · 选关直接补章`
+                        : '🎉 五枚印章已集齐 · 任选一关单独重温'}
+                    </b>
+                    <span>
+                      {missingStamps.length > 0
+                        ? '不用从头玩！点下面任一景点单独闯关，过关直接回大雁塔盖章'
+                        : '想刷哪一关或换一张游历留影照片，点景点即可直接开玩'}
+                    </span>
+                  </div>
+                  <div className="sp-grid">
+                    {route.map((s) => {
+                      const has = stamps.includes(s)
+                      return (
+                        <button
+                          type="button"
+                          key={s}
+                          className={`sp-item${has ? ' is-done' : ' is-missing'}`}
+                          onClick={() => playStops([s])}
+                        >
+                          <span className="sp-icon">{PLACES[s].icon}</span>
+                          <b>{STOPS[s].name}</b>
+                          <small>{has ? `✓ ${STOPS[s].stamp}章` : `补「${STOPS[s].stamp}」章`}</small>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {missingStamps.length > 1 && (
+                    <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
+                      ⚡ 一键连闯未拿章的 {missingStamps.length} 关（{missingStamps.map((s) => STOPS[s].name).join('、')}） →
+                    </button>
+                  )}
+                </div>
                 <div className="final-next">
                   <button type="button" className="btn big replay" onClick={replay}>
                     再游一次

@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { toPng } from 'html-to-image'
 import { STOPS, type Hero, type StopId } from '../api'
 
@@ -20,6 +20,8 @@ interface Props {
   photo?: string
   /** Shown beside the save button, same size (the 大雁塔 postcard). */
   extra?: ReactNode
+  /** Let the traveler tap a seal on the passport to jump straight to that stop and earn the stamp. */
+  onPickStop?: (stop: StopId) => void
 }
 
 // Seals are pressed by hand: each sits a little crooked.
@@ -31,14 +33,18 @@ const today = () => {
 }
 
 /** 通关文牒 — doubles as the track's required 主角卡. */
-export default function Passport({ hero, sprite, shots, stamps, route, comment, runNo, photo, extra }: Props) {
+export default function Passport({ hero, sprite, shots, stamps, route, comment, runNo, photo, extra, onPickStop }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   // Start on the latest stop the traveler cleared; ‹ › picks another for the saved card.
   const [pick, setPick] = useState(() => {
     const passed = shots.map((s) => s.passed).lastIndexOf(true)
-    return passed >= 0 ? passed : shots.length - 1
+    return passed >= 0 ? passed : Math.max(0, shots.length - 1)
   })
+  useEffect(() => {
+    const passed = shots.map((s) => s.passed).lastIndexOf(true)
+    setPick(passed >= 0 ? passed : Math.max(0, shots.length - 1))
+  }, [shots])
   const shot = shots[pick]
   // Fixed when the trip ends, so re-renders (flipping photos) can't move it past midnight.
   const [date] = useState(today)
@@ -50,8 +56,9 @@ export default function Passport({ hero, sprite, shots, stamps, route, comment, 
       const url = await toPng(ref.current, {
         pixelRatio: 2,
         cacheBust: true,
-        // The photo picker is for choosing, not part of the document.
-        filter: (node) => !(node instanceof Element && node.classList.contains('pp-pick')),
+        // The photo picker and retry badges are for choosing, not part of the printed document.
+        filter: (node) =>
+          !(node instanceof Element && (node.classList.contains('pp-pick') || node.classList.contains('pp-noprint'))),
       })
       const a = document.createElement('a')
       a.href = url
@@ -125,14 +132,35 @@ export default function Passport({ hero, sprite, shots, stamps, route, comment, 
               </span>
             </div>
             <ol className="pp-seals">
-              {route.map((s, i) => (
-                <li key={s} className={stamps.includes(s) ? 'on' : ''}>
-                  <span className="pp-seal" style={{ transform: stamps.includes(s) ? `rotate(${TILT[i % TILT.length]}deg)` : undefined }}>
-                    {STOPS[s].stamp}
-                  </span>
-                  <small>{STOPS[s].name}</small>
-                </li>
-              ))}
+              {route.map((s, i) => {
+                const has = stamps.includes(s)
+                return (
+                  <li
+                    key={s}
+                    className={`${has ? 'on' : 'missing'}${onPickStop ? ' is-clickable' : ''}`}
+                    onClick={onPickStop ? () => onPickStop(s) : undefined}
+                    role={onPickStop ? 'button' : undefined}
+                    tabIndex={onPickStop ? 0 : undefined}
+                    onKeyDown={
+                      onPickStop
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              onPickStop(s)
+                            }
+                          }
+                        : undefined
+                    }
+                    title={onPickStop ? (has ? `点击重新挑战「${STOPS[s].name}」` : `点击直接去「${STOPS[s].name}」补章`) : undefined}
+                  >
+                    <span className="pp-seal" style={{ transform: has ? `rotate(${TILT[i % TILT.length]}deg)` : undefined }}>
+                      {STOPS[s].stamp}
+                    </span>
+                    <small>{STOPS[s].name}</small>
+                    {onPickStop && !has && <em className="pp-noprint pp-retry-tag">点此补章</em>}
+                  </li>
+                )
+              })}
             </ol>
           </section>
 
