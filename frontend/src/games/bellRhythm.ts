@@ -24,6 +24,12 @@ const HERO_X = 112
 const FLOOR_Y = 566
 const HERO_H = 188
 
+// 小俑 sprite height, and its clay colours (sampled from xiaoyong.png) for the ear-covering hands
+const XY_H = 124
+const XY_SKIN = '#c18f6e'
+const XY_LINE = '#331a13'
+const XY_SLEEVE = '#b48665'
+
 const SPEED = 260
 const WINDOW = 42
 const PERFECT = 16
@@ -59,6 +65,8 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
   let shake = 0 // screen shake
   let flash = 0 // red flash on a mistake
   let xyJump = 0 // 小俑 hops when the bell rings
+  let earsT = 0 // how long 小俑 keeps its ears covered after the last ring
+  let ears = 0 // 0 = hands down, 1 = hands pressed over its ears
   let comboPop = 0
   const waves: { r: number; life: number; gold: boolean }[] = []
   const parts: Particle[] = []
@@ -113,6 +121,7 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
       glow = perfect ? 1 : 0.7
       shake = Math.max(shake, perfect ? 0.16 : 0.1)
       xyJump = 1
+      earsT = 0.75
       waves.push({ r: 70, life: 1, gold: perfect })
       if (perfect) waves.push({ r: 40, life: 1.25, gold: true })
       burst(TX, TY, perfect ? 22 : 12, perfect ? ['#fff3b0', '#ffd34d', '#ffb31a'] : ['#ffe7a3', '#e9c46a'], perfect ? 260 : 180)
@@ -165,6 +174,9 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
       shake = Math.max(0, shake - dt)
       flash = Math.max(0, flash - dt)
       xyJump = Math.max(0, xyJump - dt * 2.5)
+      earsT = Math.max(0, earsT - dt)
+      // Hands fly up fast when the bell rings, and come down slowly once it falls quiet.
+      ears = earsT > 0 ? Math.min(1, ears + dt * 12) : Math.max(0, ears - dt * 4)
       comboPop = Math.max(0, comboPop - dt * 2)
       for (const w of waves) {
         w.life -= dt * 1.4
@@ -477,15 +489,96 @@ export const bellRhythm: GameFactory = ({ assets, finish }) => {
   }
 
   function drawXiaoyong(ctx: CanvasRenderingContext2D) {
-    // 小俑 covers its ears and hops every time the bell rings.
-    const hop = Math.sin(xyJump * Math.PI) * 22
-    const tilt = Math.sin(xyJump * 18) * xyJump * 0.12
+    // 小俑 promised 「你来敲，我捂耳朵」: while the bell rings it presses its hands over its ears,
+    // squeezes its eyes shut and hops. Positions are in xiaoyong.png's own pixels.
+    const img = assets.xiaoyong
+    const k = XY_H / img.height
+    const at = (ix: number, iy: number): [number, number] => [(ix - img.width / 2) * k, -XY_H + iy * k]
+    const hop = Math.sin(xyJump * Math.PI) * 14
+    const tilt = Math.sin(xyJump * 18) * xyJump * 0.1
     ctx.save()
     ctx.translate(W - 78, H - 34 - hop)
     ctx.rotate(tilt)
-    drawSprite(ctx, assets.xiaoyong, 0, 0, 124)
+    drawSprite(ctx, img, 0, 0, XY_H)
+    if (ears > 0) {
+      const e = 1 - (1 - ears) ** 3 // ease out
+      if (ears > 0.5) {
+        // Eyes squeezed shut: paint over them with clay, then draw > <
+        for (const [ix, iy, dir] of [[165, 258, 1], [290, 255, -1]] as const) {
+          const [x, y] = at(ix, iy)
+          ctx.beginPath()
+          ctx.arc(x, y, 38 * k, 0, Math.PI * 2)
+          ctx.fillStyle = XY_SKIN
+          ctx.fill()
+          ctx.beginPath()
+          ctx.moveTo(x - dir * 16 * k, y - 14 * k)
+          ctx.lineTo(x + dir * 14 * k, y)
+          ctx.lineTo(x - dir * 16 * k, y + 14 * k)
+          ctx.strokeStyle = XY_LINE
+          ctx.lineWidth = 2.2
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.stroke()
+        }
+      }
+      // Arms swing up from the shoulders and the hands press flat over the ears.
+      for (const [sx, sy, ex, ey, side] of [[70, 430, 40, 262, -1], [322, 420, 348, 255, 1]] as const) {
+        ctx.globalAlpha = Math.min(1, ears * 2.5)
+        const [x0, y0] = at(sx, sy)
+        const [x1, y1] = at(ex, ey)
+        const x = x0 + (x1 - x0) * e
+        const y = y0 + (y1 - y0) * e
+        // Sleeve from the shoulder pad to the wrist, so it reads as an arm, not a floating disc
+        ctx.lineCap = 'round'
+        ctx.strokeStyle = XY_LINE
+        ctx.lineWidth = 64 * k + 3
+        ctx.beginPath()
+        ctx.moveTo(x0, y0)
+        ctx.lineTo(x, y + 30 * k)
+        ctx.stroke()
+        ctx.strokeStyle = XY_SLEEVE
+        ctx.lineWidth = 64 * k
+        ctx.stroke()
+        // Mitten hand: palm, three finger tips and a thumb, outlined once around the whole shape
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(side * 0.2)
+        const shapes: [number, number, number, number][] = [
+          [0, 4, 36, 42], // palm
+          [-18, -36, 13, 15],
+          [0, -42, 13, 15],
+          [18, -36, 13, 15],
+          [side * -34, 4, 12, 18], // thumb, toward the face
+        ]
+        for (const pass of [0, 1]) {
+          for (const [hx, hy, rx, ry] of shapes) {
+            ctx.beginPath()
+            ctx.ellipse(hx * k, hy * k, rx * k, ry * k, 0, 0, Math.PI * 2)
+            if (pass === 0) {
+              ctx.strokeStyle = XY_LINE
+              ctx.lineWidth = 3.4
+              ctx.stroke()
+            } else {
+              ctx.fillStyle = XY_SKIN
+              ctx.fill()
+            }
+          }
+        }
+        ctx.restore()
+        // Little ringing marks outside the hands while the bell is loud
+        if (earsT > 0 && !photoMode) {
+          ctx.strokeStyle = `rgba(255, 230, 160, ${Math.min(1, earsT * 2)})`
+          ctx.lineWidth = 2
+          for (const r of [1, 2]) {
+            ctx.beginPath()
+            ctx.arc(x, y, (50 + r * 32) * k + Math.sin(time * 30) * 1.5, side > 0 ? -0.7 : Math.PI - 0.7, side > 0 ? 0.7 : Math.PI + 0.7)
+            ctx.stroke()
+          }
+        }
+        ctx.globalAlpha = 1
+      }
+    }
     ctx.restore()
-    if (xyJump > 0.2 && !photoMode) floatText(ctx, '捂耳朵～', W - 78, H - 176 - hop, '#fff6e0', 18)
   }
 
   function drawNotes(ctx: CanvasRenderingContext2D) {
