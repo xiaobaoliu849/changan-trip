@@ -2668,22 +2668,36 @@ textarea {
   background: var(--red);
 }
 
+/* A short label over a quiet second line, like 再游一次. */
+.btn.duo {
+  line-height: 1.2;
+}
+
+.btn.duo small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: normal;
+  opacity: 0.82;
+}
+
 .cta-stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
+/* The quieter choices share one row under the main button. */
 .cta-sub {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 18px;
 }
 
-.cta-sub .btn {
-  width: 100%;
-  padding: 10px 14px;
+.cta .cta-sub .btn {
+  width: auto;
+  padding: 9px 20px;
   font-size: 14px;
 }
 
@@ -2691,11 +2705,12 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
 .retry-btn {
-  padding: 8px 16px;
+  padding: 9px 24px;
   font-size: 14px;
   border-radius: 999px;
 }
@@ -2735,37 +2750,31 @@ textarea {
   background: rgba(47, 122, 100, 0.14);
 }
 
-.ts-makeup {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1.5px dashed #e2c588;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 12.5px;
-  color: #7c4d20;
-}
-
 .ts-makeup-btn {
-  width: 100%;
-  padding: 9px 12px;
-  font-size: 13.5px;
+  display: block;
+  margin: 16px auto 2px;
+  padding: 9px 28px;
+  font-size: 14px;
+  border-radius: 999px;
 }
 
 .stop-picker {
   background: linear-gradient(135deg, #fffaf0 0%, #fbecc9 100%);
   border: 2px solid #ecd29c;
-  gap: 10px;
+  padding: 20px 16px;
+  gap: 16px;
 }
 
 .sp-head {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
 }
 
 .sp-head b {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--ink);
 }
 
@@ -2778,15 +2787,15 @@ textarea {
   display: grid;
   /* minmax(0, …): 大唐不夜城 wraps instead of pushing the grid past a phone's width. */
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .sp-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 4px;
+  gap: 5px;
+  padding: 12px 4px 10px;
   border-radius: 12px;
   border: 1.5px solid #e2c588;
   background: #fff;
@@ -2808,6 +2817,11 @@ textarea {
 .sp-item.is-done {
   border-color: rgba(47, 122, 100, 0.4);
   background: #f4faf7;
+}
+
+.sp-all {
+  padding: 11px 18px;
+  font-size: 16px;
 }
 
 .sp-icon {

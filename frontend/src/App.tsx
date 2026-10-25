@@ -901,19 +901,20 @@ export default function App() {
             </ol>
             <p className="journey-note">
               {pickedStop
-                ? `已选「${STOPS[pickedStop].name}」：只闯这一站就去大雁塔，或从这站往后逛`
+                ? `只闯「${STOPS[pickedStop].name}」，或从这站往后逛`
                 : missingStamps.length === 0
-                  ? `${route.length} 个章全集齐了！这次冲个全程不掉血？也可以点一站单独重玩`
+                  ? `${route.length} 个章全集齐了 · 点一站可以单独重玩`
                   : stamps.length > 0
-                    ? `已集 ${stamps.length}/${route.length} 个章，标「补章」的还没拿 · 点一站可以单独闯`
-                    : `你带小俑闯 ${route.length} 站集印章 · 终点大雁塔 · 点一站可以单独闯`}
+                    ? `已集 ${stamps.length}/${route.length} 个章 · 点一站可以单独闯`
+                    : `闯 ${route.length} 站集印章，终点大雁塔 · 点一站可以单独闯`}
             </p>
           </div>
           <div className="cta cta-stack">
             {pickedStop ? (
               <>
-                <button type="button" className="btn big go" onClick={() => playStops([pickedStop])}>
-                  ⚡ 只闯「{STOPS[pickedStop].name}」 →
+                <button type="button" className="btn big go duo" onClick={() => playStops([pickedStop])}>
+                  只闯{STOPS[pickedStop].name}
+                  <small>闯完就去大雁塔</small>
                 </button>
                 <div className="cta-sub">
                   <button
@@ -921,24 +922,25 @@ export default function App() {
                     className="btn ghost"
                     onClick={() => playStops(route.slice(route.indexOf(pickedStop)))}
                   >
-                    从「{STOPS[pickedStop].name}」往后顺着逛 →
+                    从这站往后逛
                   </button>
                   <button type="button" className="link" onClick={() => setPickedStop(null)}>
-                    取消选关
+                    取消
                   </button>
                 </div>
               </>
             ) : stamps.length > 0 && missingStamps.length > 0 ? (
               <>
-                <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
-                  🎯 去补没拿的 {missingStamps.length} 个章 →
+                <button type="button" className="btn big go duo" onClick={() => playStops(missingStamps)}>
+                  补齐 {missingStamps.length} 个章
+                  <small>只闯还没拿章的站</small>
                 </button>
                 <div className="cta-sub">
                   <button type="button" className="btn ghost" onClick={() => playStops(route)}>
-                    重逛全部 {route.length} 站（已有的章保留） →
+                    重逛全部 {route.length} 站
                   </button>
                   <button type="button" className="link" onClick={() => playStops(route, true)}>
-                    清空印章，从零挑战全程
+                    清空印章重来
                   </button>
                 </div>
               </>
@@ -1021,7 +1023,7 @@ export default function App() {
                 // A retry gives back the heart this miss cost, then the trip carries on from here.
                 onClick={() => playStops(activeRoute.slice(step), false, Math.min(LIVES, lives + 1))}
               >
-                🔄 再闯一次「{STOPS[stop].name}」
+                ↻ 再闯一次
               </button>
             </div>
           )}
@@ -1107,25 +1109,22 @@ export default function App() {
                         >
                           <div className={has ? 'seal on' : 'seal'}>{STOPS[s].stamp}</div>
                           <small>{STOPS[s].name}</small>
-                          <em className={`ts-retry-tag${has ? ' done' : ''}`}>{has ? '重玩' : '补章'}</em>
+                          {!has && <em className="ts-retry-tag">补章</em>}
                         </button>
                       )
                     })}
                   </div>
                   {missingStamps.length > 0 && (
-                    <div className="ts-makeup">
-                      <span>差 {missingStamps.length} 个章集齐 · 点上面的空章单独补，不用重走全程</span>
-                      <button
-                        type="button"
-                        className="btn ghost ts-makeup-btn"
-                        onClick={() => playStops(missingStamps)}
-                        disabled={endBusy}
-                      >
-                        {missingStamps.length === 1
-                          ? `🎯 去补「${STOPS[missingStamps[0]].stamp}」章 →`
-                          : `🎯 连闯没拿章的 ${missingStamps.length} 站 →`}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="btn ghost ts-makeup-btn"
+                      onClick={() => playStops(missingStamps)}
+                      disabled={endBusy}
+                    >
+                      {missingStamps.length === 1
+                        ? `去补「${STOPS[missingStamps[0]].stamp}」章`
+                        : `补齐 ${missingStamps.length} 个章`}
+                    </button>
                   )}
                 </div>
                 <Xiaoyong
@@ -1187,13 +1186,13 @@ export default function App() {
                   <div className="sp-head">
                     <b>
                       {missingStamps.length > 0
-                        ? `🎯 差 ${missingStamps.length} 个章集齐 · 选一站去补`
-                        : `🎉 ${route.length} 个章全集齐了 · 想重玩哪站点哪站`}
+                        ? `还差 ${missingStamps.length} 个章`
+                        : `🎉 ${route.length} 个章全集齐了`}
                     </b>
                     <span>
                       {missingStamps.length > 0
-                        ? '不用从头玩：闯过就回到这里，文牒上补盖新章'
-                        : '重玩一站，还能换一张游历留影'}
+                        ? '点一站去补，闯过就盖到文牒上'
+                        : '想重玩哪站，点哪站'}
                     </span>
                   </div>
                   <div className="sp-grid">
@@ -1214,8 +1213,9 @@ export default function App() {
                     })}
                   </div>
                   {missingStamps.length > 1 && (
-                    <button type="button" className="btn big go" onClick={() => playStops(missingStamps)}>
-                      ⚡ 连闯没拿章的 {missingStamps.length} 站 →
+                    <button type="button" className="btn ghost duo sp-all" onClick={() => playStops(missingStamps)}>
+                      一口气补齐
+                      <small>连闯没拿章的 {missingStamps.length} 站</small>
                     </button>
                   )}
                 </div>
